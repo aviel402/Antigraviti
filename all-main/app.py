@@ -186,6 +186,7 @@ MENU_HTML = """
         .card:nth-child(6) { animation-delay: 0.6s; }
         .card:nth-child(7) { animation-delay: 0.7s; }
         .card:nth-child(8) { animation-delay: 0.8s; }
+        .card:nth-child(9) { animation-delay: 0.9s; }
 
         .card::after {
             content: '';
@@ -480,6 +481,7 @@ if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     print("✨ Press CTRL+C to stop the server")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
