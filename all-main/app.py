@@ -487,3 +487,4 @@ if __name__ == "__main__":
     print("✨ Press CTRL+C to stop the server")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
 
+
