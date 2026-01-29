@@ -54,7 +54,7 @@ MENU_HTML = """
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="google-site-verification" content="<meta name="google-site-verification" content="zOUd6aTS4KigCVQoW-kvBhyHpDRIOOJhoFrDmB6XNCk" />" />
     <title>Arcade Hub</title>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;700;900&display=swap" rel="stylesheet">
     <style>
@@ -486,5 +486,6 @@ if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     print("✨ Press CTRL+C to stop the server")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
