@@ -2,6 +2,15 @@ from flask import Flask, render_template_string
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
 
+from flask import Flask, send_from_directory
+# (שאר האימפורטים שלך והגדרת ה-app)
+
+@app.route('/googlebf5e9f4bd69d6b9a.html')
+def google_verification():
+    # שים לב: צריך לשמור את הקובץ שגוגל נתן בתיקייה בשם static או root
+    # אפשרות פשוטה יותר היא להחזיר את הטקסט ישירות:
+    return "google-site-verification: googlebf5e9f4bd69d6b9a.html"
+    
 # נסה לייבא. אם חסר קובץ, נשתמש באפליקציית דמה (Dummy App) כדי שהקוד ירוץ
 def create_dummy_app(text):
     dummy = Flask(__name__)
@@ -477,3 +486,4 @@ if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     print("✨ Press CTRL+C to stop the server")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
