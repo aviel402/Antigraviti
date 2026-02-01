@@ -2,7 +2,7 @@ from flask import Flask, render_template_string
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
 def a(text):
-  sss=f'''
+  sss='''
   <style>
     body {
       margin: 0;
@@ -36,7 +36,7 @@ def a(text):
 
   <div class="hero">
     <div>
-      <h1>{text}</h1>
+      <h1>''',text,'''</h1>
       <div class="subtitle">🚧 האתר עדיין בפיתוח 🚧</div>
     </div>
   </div>
@@ -520,6 +520,7 @@ if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     print("✨ Press CTRL+C to stop the server")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
