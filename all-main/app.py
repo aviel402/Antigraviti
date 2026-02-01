@@ -1,45 +1,45 @@
 from flask import Flask, render_template_string
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
+def a(text):
+  sss=f'''
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+    }
+  
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 20px;
+    }
 
-sss='''
-<style>
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-    color: #fff;
-  }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1.3;
+      margin: 0;
+      font-weight: 700;
+    }
 
-  .hero {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 40px 20px;
-  }
+    .hero .subtitle {
+      margin-top: 16px;
+      font-size: 1.2rem;
+      opacity: 0.85;
+    }
+  </style>
 
-  .hero h1 {
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    line-height: 1.3;
-    margin: 0;
-    font-weight: 700;
-  }
-
-  .hero .subtitle {
-    margin-top: 16px;
-    font-size: 1.2rem;
-    opacity: 0.85;
-  }
-</style>
-
-<div class="hero">
-  <div>
-    <h1>{text}</h1>
-    <div class="subtitle">🚧 האתר עדיין בפיתוח 🚧</div>
+  <div class="hero">
+    <div>
+      <h1>{text}</h1>
+      <div class="subtitle">🚧 האתר עדיין בפיתוח 🚧</div>
+    </div>
   </div>
-</div>
 
 '''
     
@@ -48,7 +48,7 @@ def create_dummy_app(text):
     dummy = Flask(__name__)
     @dummy.route('/')
     def index():
-        return render_template_string(sss)
+        return a(text)
     return dummy
 
 try: from app1 import app as game1
@@ -520,6 +520,7 @@ if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     print("✨ Press CTRL+C to stop the server")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
