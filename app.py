@@ -79,6 +79,12 @@ except ImportError: game8 = create_dummy_app("משחק 8")
 
 try: from app9 import app as game9
 except ImportError: game9 = create_dummy_app("CLOVER")
+    
+try: from app10 import app as game10
+except ImportError: game10 = create_dummy_app("CLOVER")
+    
+try: from app11 import app as game11
+except ImportError: game11 = create_dummy_app("CLOVER")
 
 
 # --- הלאוצ'ר הראשי ---
@@ -513,11 +519,17 @@ app = DispatcherMiddleware(main_app, {
     '/game6': game6,
     '/game7': game7,
     '/game8': game8,
-    '/game9': game9
+    '/game9': game9,
+    '/game10': game10,
+    '/game11': game11,
+
+
+    
 })
 
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     print("✨ Press CTRL+C to stop the server")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
