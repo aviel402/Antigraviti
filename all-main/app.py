@@ -41,7 +41,7 @@ def a(text):
     </div>
   </div>
 
-'''
+  '''
     
 # נסה לייבא. אם חסר קובץ, נשתמש באפליקציית דמה (Dummy App) כדי שהקוד ירוץ
 def create_dummy_app(text):
@@ -520,6 +520,7 @@ if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     print("✨ Press CTRL+C to stop the server")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
