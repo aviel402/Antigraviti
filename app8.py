@@ -26,8 +26,8 @@ HOSTS = {
     "dragon":  {"name": "דרקון", "icon": "🐲", "hp": 320, "atk": 48, "tier": 3, "color": "#fa0"}
 }
 HOSTSN={
-    't1':["blob", "rat", "drone"]
-    't2':["wolf", "soldier", "alien"]
+    't1':["blob", "rat", "drone"],
+    't2':["wolf", "soldier", "alien"],
     't3':["robot", "beast"]
 }
 # תוספות ל-HOSTS
@@ -79,8 +79,8 @@ class Engine:
 
     def init_arena(self):
         names = ["אלפא", "בטא", "גמא", "דלתא", "נמסיס", "צללית", "רוח", "זעם"]
-        for i in range(1,5)
-            for n in enumerate(names):
+        for i in range(1,5):
+            for n in names:
                 bot = {
                     "name": n+f'{i}',
                     "host": "rat",
@@ -324,7 +324,7 @@ class Engine:
                 "name": b['name'],
                 "host_name": HOSTS[b['host']]['name'],
                 "icon": HOSTS[b["host"]]["icon"],
-"hp": b["hp"],
+                "hp": b["hp"],
                 "max_hp": b["max_hp"],
                 "is_corpse": False,
                 "color": HOSTS[b["host"]]["color"],
@@ -483,7 +483,7 @@ HTML = """
         animation: glow 3s infinite;
     }
     .cell { 
-        width32px; 
+        width:32px; 
         height:32px; 
         display:flex; 
         align-items:center; 
@@ -957,4 +957,4 @@ window.addEventListener("keydown", e => {
 
 if __name__ == "__main__":
     print("🦠 Parasite Arena Enhanced - http://localhost:5006")
-    app.run(port=5006, debug=True)
+    app.run(port=5006)
