@@ -17,7 +17,7 @@
     },
     {
       "src": "/x"
-      "dest": "/php.py"
+      "dest": "php.py"
     }
     {
       "src": "/(.*)",
