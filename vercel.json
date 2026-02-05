@@ -5,20 +5,12 @@
       "src": "app.py",
       "use": "@vercel/python"
     },
-    {
-      "src": "php.py",
-      "use": "@vercel/python"
-    }
   ],
   "routes": [
     {
       "src": "/logo.png",
       "dest": "/logo.png"
     },
-    {
-      "src": "/x"
-      "dest": "php.py"
-    }
     {
       "src": "/(.*)",
       "dest": "app.py"
