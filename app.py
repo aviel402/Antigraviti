@@ -168,7 +168,7 @@ MENU_HTML = """
     </style>
 </head>
 <body>
-    <h1>Arcade Station</h1>
+    <h1 href="/php/">Arcade Station</h1>
     <p class="subtitle">בחר את ההרפתקה הבאה שלך</p>
 
     <div class="grid">
@@ -208,3 +208,4 @@ app = DispatcherMiddleware(main_app, {
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
