@@ -3,66 +3,64 @@ from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
 
-# --- עיצוב האתר (HTML) ---
-HTML_TEMPLATE = """
+# תבנית HTML פשוטה שמאפשרת לך גם להזין כתובת וגם לראות את המקור
+HTML_PAGE = """
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>מעתיק קוד מקור</title>
+    <title>מעתיק מקור דף</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f4f7f6; padding: 20px; }
-        pre { background: #2d2d2d; color: #ccc; padding: 15px; border-radius: 8px; direction: ltr; text-align: left; max-height: 600px; }
-        .url-form { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    </style>
 </head>
-<body>
-<div class="container">
-    <div class="url-form text-center">
-        <h2>העתקת קוד מקור של אתר</h2>
-        <form method="GET" class="row g-3 mt-3">
-            <div class="col-md-9">
-                <input type="text" name="url" class="form-control" placeholder="הכנס כתובת אתר (למשל: https://google.com)" value="{{ current_url }}">
-            </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary w-100">הצג קוד מקור</button>
-            </div>
-        </form>
-    </div>
+<body class="container py-5">
+    <h2 class="mb-4">הזן כתובת אתר להעתקת מקור:</h2>
+    <form method="GET" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="url" class="form-control" placeholder="https://example.com" value="{{ url }}">
+            <button type="submit" class="btn btn-primary">העתק מקור</button>
+        </div>
+    </form>
 
-    {% if source %}
-        <div class="card shadow">
-            <div class="card-header bg-dark text-white">קוד המקור של: {{ current_url }}</div>
+    {% if html_content %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <span>מקור הדף עבור: {{ url }}</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('source').innerText)">העתק הכל</button>
+            </div>
             <div class="card-body">
-                <pre><code>{{ source | e }}</code></pre> 
+                <pre id="source" style="background: #f4f4f4; padding: 15px; max-height: 500px; overflow: auto; direction: ltr; text-align: left;"><code>{{ html_content | e }}</code></pre>
             </div>
         </div>
-    {% elif error %}
+    {% endif %}
+
+    {% if error %}
         <div class="alert alert-danger">{{ error }}</div>
     {% endif %}
-</div>
 </body>
 </html>
 """
 
-@app.route('/')
-def get_source():
-    url = request.args.get('url')
-    source = None
+@app.route('/', methods=['GET'])
+def proxy():
+    # שליפת הכתובת מה-URL (למשל: /?url=http://google.com)
+    target_url = request.args.get('url')
+    html_content = None
     error = None
 
-    if url:
+    if target_url:
         try:
-            # הגדרת User-Agent כדי שהאתר יחשוב שאנחנו דפדפן רגיל
+            # הוספת User-Agent כדי שהאתר לא יחסום אותנו (מתנהג כמו דפדפן רגיל)
             headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(target_url, headers=headers, timeout=10)
             response.raise_for_status()
-            source = response.text # זהו קוד המקור (HTML)
+            
+            # כאן אנחנו לוקחים את ה-HTML הגולמי
+            html_content = response.text
+            
         except Exception as e:
             error = f"שגיאה בשליפת הדף: {str(e)}"
 
-    return render_template_string(HTML_TEMPLATE, source=source, error=error, current_url=url or "")
+    return render_template_string(HTML_PAGE, html_content=html_content, error=error, url=target_url or "")
 
 if __name__ == '__main__':
     app.run(debug=True)
