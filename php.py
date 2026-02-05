@@ -5,7 +5,7 @@ from flask import Flask, render_template_string
 # --- 1. הגדרות וקונפיגורציה (Settings) ---
 class Config:
     # כתובת דמה לבדיקה (JSONPlaceholder)
-    API_URL = "https://jsonplaceholder.typicode.com/todos/1"
+    API_URL = "https://games.yo-yoo.co.il/games_play.php?game=5502"
     TIMEOUT_SECONDS = 5
 
 # --- 2. הגדרת לוגים (Logging) ---
