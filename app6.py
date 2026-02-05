@@ -3,7 +3,7 @@ import uuid
 from flask import Flask, render_template_string, request, jsonify, session, url_for
 
 app = Flask(__name__)
-app.secret_key = 'dm_pro_fixed_v7'
+app.secret_key = 'dm_pro_fixe_v7'
 
 # ==========================================
 # 📘 מאגר נתונים (DATABASE)
@@ -547,8 +547,8 @@ HTML = """
         let k = e.key;
         if(k=="ArrowUp") send('move',[0,1]);
         if(k=="ArrowDown") send('move',[0,-1]);
-        if(k=="ArrowLeft") send('move',[-1,0]);
-        if(k=="ArrowRight") send('move',[1,0]);
+        if(k=="ArrowLeft") send('move',[1,0]);
+        if(k=="ArrowRight") send('move',[-1,0]);
         if(k==" " || k=="Enter") send('attack');
         if(k=="e") send('take');
     });
