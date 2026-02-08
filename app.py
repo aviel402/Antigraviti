@@ -1,153 +1,211 @@
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
-from flask import Flask, render_template_string
-import random
+from flask import Flask, render_template_string, send_from_directory
+import os
 
-# --- 1. דף "בפיתוח" משודרג (מראה של טרמינל) ---
-def under_construction_html(text):
+# --- 1. דף "בפיתוח" מעוצב ---
+def a(text):
     return f'''
-    <style>
-        body {{ background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }}
-        .terminal {{ border: 2px solid #0f0; padding: 40px; box-shadow: 0 0 20px #0f0; }}
-        .cursor {{ display: inline-block; width: 10px; height: 20px; background: #0f0; animation: blink 1s infinite; }}
-        @keyframes blink {{ 0%, 100% {{ opacity: 0; }} 50% {{ opacity: 1; }} }}
-    </style>
-    <div class="terminal">
-        <h1>> ACCESSING: {text}...</h1>
-        <p>> STATUS: UNDER_DEVELOPMENT <span class="cursor"></span></p>
-        <p>> נתיב המערכת נמצא בבנייה. אנא חזור מאוחר יותר.</p>
-    </div>
+      <style>
+        body {{
+          margin: 0;
+          font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+          background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+          color: #fff;
+          height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }}
+        .hero {{ text-align: center; padding: 40px 20px; }}
+        h1 {{ font-size: clamp(2rem, 5vw, 3.5rem); margin: 0; font-weight: 700; }}
+        .subtitle {{ margin-top: 16px; font-size: 1.2rem; opacity: 0.85; }}
+      </style>
+      <div class="hero">
+        <div>
+          <h1>{text}</h1>
+          <div class="subtitle">🚧 האתר עדיין בפיתוח 🚧</div>
+        </div>
+      </div>
     '''
 
+# פונקציית דמה ליצירת אפליקציות חסרות
 def create_dummy_app(text):
     dummy = Flask(__name__)
     @dummy.route('/')
-    def index(): return under_construction_html(text)
+    def index():
+        return a(text)
     return dummy
 
-# --- 2. ניהול אפליקציות חכם ---
-apps_config = {
-    "game1": "הישרדות 🏝️", "game2": "RPG Legend ⚔️", "game3": "Genesis 🚀",
-    "game4": "קוד אדום 💻", "game5": "IRON LEGION 🔫", "game6": "מבוך הצללים 🗝️",
-    "game7": "PROXIMA 🔥", "game8": "הטפיל 🦠", "game9": "CLOVER 🍀",
-    "game10": "CLOVER 2 🍀", "game11": "CLOVER 3 🍀", "php": "Web Scanner 🚀"
-}
+# --- 2. ייבוא בטוח של האפליקציות ---
+# נסה לייבא - אם לא קיים, השתמש בדמה
+try: from app1 import app as game1
+except ImportError: game1 = create_dummy_app("משחק 1")
 
-mounted_apps = {}
-for key, name in apps_config.items():
-    try:
-        # ניסיון ייבוא דינמי
-        module = __import__(key)
-        mounted_apps[f'/{key}'] = module.app
-    except ImportError:
-        mounted_apps[f'/{key}'] = create_dummy_app(name)
+try: from app2 import app as game2
+except ImportError: game2 = create_dummy_app("משחק 2")
+
+try: from app3 import app as game3
+except ImportError: game3 = create_dummy_app("משחק 3")
+
+try: from app4 import app as game4
+except ImportError: game4 = create_dummy_app("משחק 4")
+
+try: from app5 import app as game5
+except ImportError: game5 = create_dummy_app("משחק 5")
+
+try: from app6 import app as game6
+except ImportError: game6 = create_dummy_app("משחק 6")
+
+try: from app7 import app as game7
+except ImportError: game7 = create_dummy_app("משחק 7")
+
+try: from app8 import app as game8
+except ImportError: game8 = create_dummy_app("משחק 8")
+
+try: from app9 import app as game9
+except ImportError: game9 = create_dummy_app("CLOVER")
+
+try: from app10 import app as game10
+except ImportError: game10 = create_dummy_app("CLOVER")
+
+try: from app11 import app as game11
+except ImportError: game11 = create_dummy_app("CLOVER")
+
+try: from php import app as php_app
+except ImportError: php_app = create_dummy_app("PHP App")
 
 # --- 3. הלאוצ'ר הראשי ---
 main_app = Flask(__name__)
+
+@main_app.route('/logo.png')
+def favicon():
+    return "LOGO_DATA" # placeholder - פשטתי למניעת קריסה אם אין קובץ
+
+@main_app.route('/')
+def index():
+    return render_template_string(MENU_HTML)
 
 MENU_HTML = """
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Arcade Hub | Future Gaming</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Heebo:wght@300;700&display=swap" rel="stylesheet">
+    <title>Arcade Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --p: #6c7ce7; --a: #00cec9; --bg: #050507; }
+        :root {
+            --primary: #6c7ce7;
+            --accent: #00cec9;
+            --bg-dark: #0a0a0c;
+            --card-bg: #1e1e24;
+            --glow-primary: rgba(108, 124, 231, 0.4);
+            --glow-accent: rgba(0, 206, 201, 0.4);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            background: var(--bg);
-            color: #fff;
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 10% 20%, rgb(30, 30, 30) 0%, rgb(10, 10, 12) 90%);
+            color: #dfe6e9;
             font-family: 'Heebo', sans-serif;
-            overflow-x: hidden;
-            background: radial-gradient(circle at center, #111 0%, #000 100%);
+            text-align: center;
+            padding: 40px 20px;
+            min-height: 100vh;
         }
 
-        /* אפקט קווי טלוויזיה ישנים */
-        body::before {
-            content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 2; background-size: 100% 4px, 3px 100%; pointer-events: none;
+        h1 {
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            margin: 0 0 10px 0;
+            background: linear-gradient(90deg, #a29bfe, #74b9ff, #00cec9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+            text-transform: uppercase;
         }
 
-        header { padding: 60px 20px; text-align: center; position: relative; z-index: 3; }
-        h1 { 
-            font-family: 'Orbitron', sans-serif; font-size: 4rem; letter-spacing: 5px;
-            background: linear-gradient(to bottom, #fff 30%, var(--p));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 15px var(--p));
-        }
+        .subtitle { color: #b2bec3; font-size: 1.2rem; margin-bottom: 60px; font-weight: 300; }
 
         .grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px; max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-index: 3;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 15px; padding: 30px; text-decoration: none; color: white;
-            transition: 0.3s; position: relative; overflow: hidden;
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px 20px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.4s;
             display: flex; flex-direction: column; align-items: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            position: relative; overflow: hidden;
         }
-
-        .card::before {
-            content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-            transition: 0.5s;
-        }
-
-        .card:hover::before { left: 100%; }
 
         .card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.07);
-            border-color: var(--a);
-            box-shadow: 0 0 30px rgba(0, 206, 201, 0.3);
+            transform: translateY(-10px) scale(1.03);
+            border-color: var(--accent);
+            box-shadow: 0 20px 40px rgba(0, 206, 201, 0.2);
+            background: linear-gradient(135deg, #252530 0%, #2a2a35 100%);
         }
 
-        .emoji { font-size: 50px; margin-bottom: 15px; transition: 0.3s; }
-        .card:hover .emoji { transform: scale(1.2) rotate(5deg); }
+        .emoji-icon { font-size: 60px; margin-bottom: 15px; filter: drop-shadow(0 0 15px rgba(255,255,255,0.3)); }
+        
+        .card h2 { margin: 10px 0; font-size: 1.5rem; font-weight: 700; }
+        
+        .tag {
+            font-size: 0.85rem; color: #81ecec; background: rgba(129, 236, 236, 0.15);
+            padding: 6px 14px; border-radius: 20px; margin-top: 10px;
+            border: 1px solid rgba(129, 236, 236, 0.2);
+        }
 
-        .tag { font-size: 0.7rem; text-transform: uppercase; color: var(--a); letter-spacing: 1px; margin-top: 10px; }
-
-        footer { padding: 40px; text-align: center; color: #444; font-size: 0.8rem; }
+        footer { margin-top: 80px; color: #636e72; font-size: 0.85rem; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>ARCADE HUB</h1>
-        <p style="color: var(--a); opacity: 0.7;">VIRTUAL_STATION_v2.0</p>
-    </header>
+    <h1>Arcade Station</h1>
+    <p class="subtitle">בחר את ההרפתקה הבאה שלך</p>
 
     <div class="grid">
-        <a href="/game1/" class="card"><span class="emoji">🏝️</span><h2>הישרדות</h2><div class="tag">Resources Management</div></a>
-        <a href="/game2/" class="card"><span class="emoji">⚔️</span><h2>RPG Legend</h2><div class="tag">Text-Based Action</div></a>
-        <a href="/game3/" class="card"><span class="emoji">🚀</span><h2>Genesis</h2><div class="tag">Space Exploration</div></a>
-        <a href="/game4/" class="card"><span class="emoji">💻</span><h2>קוד אדום</h2><div class="tag">Hacking Sim</div></a>
-        <a href="/game5/" class="card"><span class="emoji">🔫</span><h2>IRON LEGION</h2><div class="tag">Military Strategy</div></a>
-        <a href="/game6/" class="card"><span class="emoji">🗝️</span><h2>מבוך הצללים</h2><div class="tag">Dark Adventure</div></a>
-        <a href="/game7/" class="card"><span class="emoji">🔥</span><h2>PROXIMA</h2><div class="tag">Deep Space</div></a>
-        <a href="/game8/" class="card"><span class="emoji">🦠</span><h2>הטפיל</h2><div class="tag">Body Snatcher</div></a>
-        <a href="/php/" class="card"><span class="emoji">🚀</span><h2>Web Scanner</h2><div class="tag">Source Tools</div></a>
+        <a href="/game1/" class="card"><span class="emoji-icon">🏝️</span><h2>הישרדות</h2><div class="tag">ניהול משאבים</div></a>
+        <a href="/game2/" class="card"><span class="emoji-icon">⚔️</span><h2>RPG Legend</h2><div class="tag">אקשן טקסטואלי</div></a>
+        <a href="/game3/" class="card"><span class="emoji-icon">🚀</span><h2>Genesis</h2><div class="tag">מסע בחלל</div></a>
+        <a href="/game4/" class="card"><span class="emoji-icon">💻</span><h2>קוד אדום</h2><div class="tag">פרוץ, גנוב, היעלם</div></a>
+        <a href="/game5/" class="card"><span class="emoji-icon">🔫</span><h2>IRON LEGION</h2><div class="tag">מלחמות</div></a>
+        <a href="/game6/" class="card"><span class="emoji-icon">🗝️</span><h2>מבוך הצללים</h2><div class="tag">הרפתקה אפלה</div></a>
+        <a href="/game7/" class="card"><span class="emoji-icon">🔥</span><h2>PROXIMA</h2><div class="tag">אסטרטגיית חלל</div></a>
+        <a href="/game8/" class="card"><span class="emoji-icon">🦠</span><h2>הטפיל</h2><div class="tag">החלפת גופות</div></a>
+        <a href="/game9/" class="card"><span class="emoji-icon">🍀</span><h2>CLOVER</h2><div class="tag">Action Platformer</div></a>
     </div>
 
-    <footer>
-        &copy; 2026 Developed by Aviel Aluf | System Status: Optimal
-    </footer>
+    <footer>&copy; Aviel Aluf x0583289789@gmail.com</footer>
 </body>
 </html>
 """
 
-@main_app.route('/')
-def index():
-    return render_template_string(MENU_HTML)
+# --- 4. חיבור האפליקציות ---
+app = DispatcherMiddleware(main_app, {
+    '/game1': game1,
+    '/game2': game2,
+    '/game3': game3,
+    '/game4': game4,
+    '/game5': game5,
+    '/game6': game6,
+    '/game7': game7,
+    '/game8': game8,
+    '/game9': game9,
+    '/game10': game10,
+    '/game11': game11,
+    '/php': php_app
+})
 
-# חיבור כל האפליקציות ל-Launcher
-app = DispatcherMiddleware(main_app, mounted_apps)
-
+# --- 5. הרצה ---
 if __name__ == "__main__":
-    print("🚀 Arcade Hub is LIVE at http://localhost:5000")
-    run_simple('0.0.0.0', 5000, app, use_reloader=True)
+    print("🎮 Arcade Station Running at http://localhost:5000")
+    run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
