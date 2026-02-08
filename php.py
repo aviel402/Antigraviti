@@ -17,6 +17,32 @@ THEMES = [
     {"name": "Matrix", "bg": "#000000", "primary": "#00ff41", "secondary": "#008f11", "text": "#00ff41", "code_theme": "prism-tomorrow"},
     {"name": "Nordic Ice", "bg": "#2e3440", "primary": "#88c0d0", "secondary": "#81a1c1", "text": "#eceff4", "code_theme": "prism-nord"},
 ]
+ADDITIONAL_THEMES = [
+    # 1. Sunset / Vaporwave - גווני סגול, ורוד וכתום
+    {"name": "Vaporwave Sunset", "bg": "#241744", "primary": "#ff71ce", "secondary": "#01cdfe", "text": "#fff2f1", "code_theme": "prism-tomorrow"},
+    
+    # 2. Dracula - ערכת הנושא האהובה על מתכנתים (כהה מאוד עם ניאון עדין)
+    {"name": "Dracula Night", "bg": "#282a36", "primary": "#bd93f9", "secondary": "#ff79c6", "text": "#f8f8f2", "code_theme": "prism-tomorrow"},
+    
+    # 3. Emerald City - גווני ירוק בקבוק עמוק וזהב
+    {"name": "Emerald City", "bg": "#021c1e", "primary": "#00676b", "secondary": "#2fb98a", "text": "#d8f3dc", "code_theme": "prism-okaidia"},
+    
+    # 4. Monokai Pro - קלאסיקה של סביבות עבודה (אפור כהה עם צבעוניות פסטלית)
+    {"name": "Monokai Classic", "bg": "#2d2a2e", "primary": "#ffd866", "secondary": "#ff6188", "text": "#fcfcfa", "code_theme": "prism-okaidia"},
+    
+    # 5. Arctic Frost - לבן-כחול נקי (Light Theme)
+    {"name": "Arctic Frost", "bg": "#f0f4f8", "primary": "#1b6ca8", "secondary": "#4ba3c3", "text": "#243b53", "code_theme": "prism-coy"},
+    
+    # 6. Coffee House - גווני חום, בז' ושמנת חמימים
+    {"name": "Coffee House", "bg": "#3c2f2f", "primary": "#be9b7b", "secondary": "#854442", "text": "#fff4e6", "code_theme": "prism-twilight"},
+    
+    # 7. Red Code - למראה "האקרי" דרמטי באדום ושחור
+    {"name": "Red Alert", "bg": "#0a0000", "primary": "#ff4d4d", "secondary": "#b30000", "text": "#ffe6e6", "code_theme": "prism-funky"},
+    
+    # 8. Royal Velvet - כחול צי וחום מוזהב יוקרתי
+    {"name": "Royal Velvet", "bg": "#1a1c2c", "primary": "#f4d03f", "secondary": "#d4af37", "text": "#e0e0e0", "code_theme": "prism-tomorrow"}
+]
+THEMES.extend(ADDITIONAL_THEMES)
 
 # --- פונקציות עזר ---
 
@@ -129,7 +155,7 @@ HTML_PAGE = """
         <p class="opacity-75">סורק אתרים מתקדם | מצב: <strong>{{ theme.name }}</strong></p>
         
         <div class="d-flex justify-content-center gap-2 mt-3">
-            <a href="/" class="btn btn-sm btn-outline-light">החלף עיצוב רנדומלי 🎲</a>
+            <a href="/php" class="btn btn-sm btn-outline-light">החלף עיצוב רנדומלי 🎲</a>
         </div>
     </div>
 
