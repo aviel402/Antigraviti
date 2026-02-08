@@ -75,6 +75,9 @@ except ImportError: game11 = create_dummy_app("CLOVER")
 try: from php import app as php_app
 except ImportError: php_app = create_dummy_app("PHP App")
 
+try: from html import app as html_app
+except ImportError: html_app = create_dummy_app("html App")
+
 # --- 3. הלאוצ'ר הראשי ---
 main_app = Flask(__name__)
 
@@ -201,11 +204,13 @@ app = DispatcherMiddleware(main_app, {
     '/game9': game9,
     '/game10': game10,
     '/game11': game11,
-    '/php': php_app
+    '/php': php_app,
+    '/html': html_app
 })
 
 # --- 5. הרצה ---
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
