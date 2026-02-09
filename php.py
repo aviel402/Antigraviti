@@ -60,7 +60,7 @@ HTML_PAGE = """
                 <h3>קוד מקור (HTML)</h3>
                 <p>הקוד נסרק בהצלחה. ניתן להעתיק או להוריד כקובץ.</p>
                 <button onclick="copyToClipboard()" class="btn btn-outline-info w-100 mb-2">העתק קוד לקליפבורד</button>
-                <a href="/download?url={{ url }}" class="btn btn-action w-100">הורד קובץ index.html</a>
+                <a href="php/download?url={{ url }}" class="btn btn-action w-100">הורד קובץ index.html</a>
             </div>
         </div>
 
