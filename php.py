@@ -1,232 +1,274 @@
 import requests
 import re
-import random
-from flask import Flask, render_template_string, request
-from urllib.parse import urljoin
+import io
+import zipfile
+import os
+import mimetypes
+from flask import Flask, render_template_string, request, Response, send_file
+from urllib.parse import urljoin, urlparse, unquote
+from bs4 import BeautifulSoup  # pip install beautifulsoup4
 
 app = Flask(__name__)
 
-# --- הגדרות עיצוב ---
-THEMES = [
-    {"name": "Cyberpunk", "bg": "#0f0524", "primary": "#ff00ff", "secondary": "#00ffff", "text": "#ffffff", "code_theme": "prism-tomorrow"},
-    {"name": "Deep Ocean", "bg": "#011627", "primary": "#2081C3", "secondary": "#63D2FF", "text": "#d6e8ee", "code_theme": "prism-okaidia"},
-    {"name": "Forest Dark", "bg": "#1a1f16", "primary": "#5e8c31", "secondary": "#a2d240", "text": "#e8f0e2", "code_theme": "prism-twilight"},
-    {"name": "Midnight Gold", "bg": "#121212", "primary": "#D4AF37", "secondary": "#FFD700", "text": "#f4f4f4", "code_theme": "prism-funky"},
-    {"name": "Mars Rover", "bg": "#2b0f0e", "primary": "#e27d60", "secondary": "#e8a87c", "text": "#ffffff", "code_theme": "prism-coy"},
-    {"name": "Soft Purple", "bg": "#2d1b33", "primary": "#c39bd3", "secondary": "#f06292", "text": "#f5f5f5", "code_theme": "prism-dark"},
-    {"name": "Matrix", "bg": "#000000", "primary": "#00ff41", "secondary": "#008f11", "text": "#00ff41", "code_theme": "prism-tomorrow"},
-    {"name": "Nordic Ice", "bg": "#2e3440", "primary": "#88c0d0", "secondary": "#81a1c1", "text": "#eceff4", "code_theme": "prism-nord"},
-    {"name": "Vaporwave Sunset", "bg": "#241744", "primary": "#ff71ce", "secondary": "#01cdfe", "text": "#fff2f1", "code_theme": "prism-tomorrow"},
-    {"name": "Dracula Night", "bg": "#282a36", "primary": "#bd93f9", "secondary": "#ff79c6", "text": "#f8f8f2", "code_theme": "prism-tomorrow"},
-    {"name": "Emerald City", "bg": "#021c1e", "primary": "#00676b", "secondary": "#2fb98a", "text": "#d8f3dc", "code_theme": "prism-okaidia"},
-    {"name": "Monokai Classic", "bg": "#2d2a2e", "primary": "#ffd866", "secondary": "#ff6188", "text": "#fcfcfa", "code_theme": "prism-okaidia"},
-    {"name": "Arctic Frost", "bg": "#f0f4f8", "primary": "#1b6ca8", "secondary": "#4ba3c3", "text": "#243b53", "code_theme": "prism-coy"},
-    {"name": "Coffee House", "bg": "#3c2f2f", "primary": "#be9b7b", "secondary": "#854442", "text": "#fff4e6", "code_theme": "prism-twilight"},
-    {"name": "Red Alert", "bg": "#0a0000", "primary": "#ff4d4d", "secondary": "#b30000", "text": "#ffe6e6", "code_theme": "prism-funky"},
-    {"name": "Royal Velvet", "bg": "#1a1c2c", "primary": "#f4d03f", "secondary": "#d4af37", "text": "#e0e0e0", "code_theme": "prism-tomorrow"}
-]
+# --- קונפיגורציה לזיוף דפדפן ---
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Referer': 'https://www.google.com/',
+    'Accept-Language': 'en-US,en;q=0.5'
+}
 
-# --- פונקציות עזר ---
+def clean_filename(url):
+    """יוצר שם קובץ נקי מכתובת URL"""
+    path = urlparse(url).path
+    filename = os.path.basename(unquote(path))
+    if not filename: return "file"
+    # הסרת תווים בעייתיים
+    return re.sub(r'[^a-zA-Z0-9._-]', '', filename)
 
-def fix_url(url):
-    """מוודא שיש פרוטוקול תקין לכתובת"""
-    if not url: return ""
-    if not url.startswith(('http://', 'https://')):
-        return 'https://' + url
-    return url
+def generate_fixed_zip(url):
+    """
+    מייצר ZIP שבו כל הקישורים תוקנו כך שיעבדו אופליין בצורה מושלמת.
+    מטפל בבעיות Lazy Load שיש באתרים כמו CrazyGames.
+    """
+    try:
+        session = requests.Session()
+        session.headers.update(HEADERS)
+        response = session.get(url, timeout=15)
+        response.encoding = response.apparent_encoding
+        
+        if response.status_code != 200: return None
 
-def extract_data(html, base_url):
-    """חילוץ תמונות וכותרות מה-HTML"""
-    # חילוץ תמונות
-    img_urls = re.findall(r'<img [^>]*src=["\']([^"\']+)["\']', html, re.IGNORECASE)
-    # המרת נתיבים יחסיים למוחלטים
-    full_img_urls = list(set([urljoin(base_url, u) for u in img_urls if u]))
-    
-    # חילוץ כותרת
-    title_match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE | re.DOTALL)
-    title = title_match.group(1).strip() if title_match else "ללא כותרת"
+        soup = BeautifulSoup(response.text, 'html.parser')
+        base_url = url
+        
+        # זיכרון ליצירת ה-ZIP
+        zip_buffer = io.BytesIO()
+        
+        # מעקב כדי לא להוריד אותו קובץ פעמיים
+        downloaded_files = {} 
+        file_counter = 0
 
-    # חילוץ תיאור
-    desc_match = re.search(r'<meta name=["\']description["\'] content=["\'](.*?)["\']', html, re.IGNORECASE)
-    description = desc_match.group(1).strip() if desc_match else "ללא תיאור"
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            
+            # 1. חיפוש נכסים: תמונות, סקריפטים, עיצובים
+            # אנחנו מחפשים גם src וגם data-src (לטעינה עצלה)
+            tags_to_process = [
+                ('img', ['src', 'data-src'], 'assets_img'),
+                ('script', ['src'], 'assets_js'),
+                ('link', ['href'], 'assets_css')
+            ]
 
-    return {
-        "images": full_img_urls[:12], # רק 12 ראשונות
-        "total_images": len(full_img_urls),
-        "title": title,
-        "description": description
-    }
+            for tag_name, attrs, folder in tags_to_process:
+                for tag in soup.find_all(tag_name):
+                    
+                    # ניקוי תגיות בעייתיות לאופליין
+                    if tag.has_attr('srcset'): del tag['srcset'] 
+                    if tag.has_attr('crossorigin'): del tag['crossorigin']
+                    if tag.has_attr('integrity'): del tag['integrity']
 
-# --- תבנית ה-HTML ---
-HTML_PAGE = """
+                    # בדיקה אם קיים אחד מהמאפיינים (src/href/data-src)
+                    target_attr = None
+                    original_val = None
+                    
+                    for attr in attrs:
+                        if tag.has_attr(attr) and tag[attr]:
+                            target_attr = attr
+                            original_val = tag[attr]
+                            break
+                    
+                    if not target_attr: continue
+                    if original_val.startswith('data:') or original_val.startswith('#'): continue
+
+                    # המרה לכתובת מלאה
+                    abs_url = urljoin(base_url, original_val)
+                    
+                    # בדיקה אם כבר הורדנו
+                    if abs_url in downloaded_files:
+                        tag[target_attr] = downloaded_files[abs_url] # עדכון ה-HTML לקובץ המקומי
+                        continue
+
+                    try:
+                        # הורדת הקובץ
+                        file_res = session.get(abs_url, timeout=5)
+                        if file_res.status_code == 200:
+                            file_counter += 1
+                            
+                            # קביעת שם קובץ וסיומת
+                            ext = os.path.splitext(clean_filename(abs_url))[1]
+                            if not ext: # אם אין סיומת, ננסה לנחש לפי ה-Content-Type
+                                content_type = file_res.headers.get('Content-Type', '')
+                                ext = mimetypes.guess_extension(content_type.split(';')[0]) or '.bin'
+
+                            local_filename = f"{folder}/res_{file_counter}{ext}"
+                            
+                            # כתיבה ל-ZIP
+                            zf.writestr(local_filename, file_res.content)
+                            
+                            # עדכון ה-HTML שיצביע לקובץ המקומי
+                            tag[target_attr] = local_filename
+                            
+                            # טיפול מיוחד ל-Lazy Load:
+                            # אם הורדנו מ-data-src, נעביר את זה ל-src כדי שהדפדפן יציג את זה מיד
+                            if target_attr == 'data-src':
+                                tag['src'] = local_filename
+                                del tag['data-src']
+
+                            downloaded_files[abs_url] = local_filename
+                            print(f"Downloaded: {abs_url}")
+
+                    except Exception as e:
+                        print(f"Failed asset: {abs_url} - {e}")
+                        pass
+
+            # הוספת CSS בסיסי כדי שהאתר ייראה טוב בתוך iframe אם צריך
+            extra_css = soup.new_tag("style")
+            extra_css.string = "body { margin: 0; padding: 0; overflow-x: hidden; } img { max-width: 100%; }"
+            if soup.head: soup.head.append(extra_css)
+
+            # שמירת ה-HTML המעובד
+            zf.writestr('index.html', soup.prettify())
+        
+        zip_buffer.seek(0)
+        return zip_buffer
+
+    except Exception as e:
+        print(f"Error generating ZIP: {e}")
+        return None
+
+
+# --- עיצוב ותבנית HTML ---
+HTML_UI = """
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web-Scanner Pro | {{ theme.name }}</title>
+    <title>Web Ripper V3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/{{ theme.code_theme }}.min.css" rel="stylesheet" />
-    
     <style>
-        :root { 
-            --bg: {{ theme.bg }}; 
-            --primary: {{ theme.primary }}; 
-            --secondary: {{ theme.secondary }}; 
-            --text: {{ theme.text }}; 
-        }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; transition: 0.3s; min-height: 100vh; }
-        
-        .glass-card { 
-            background: rgba(255, 255, 255, 0.05); 
-            backdrop-filter: blur(12px); 
-            border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 16px; 
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        body {
+            background-color: #121212;
+            color: white;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
         }
         
-        .btn-gradient { background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: #fff; font-weight: bold; }
-        .btn-gradient:hover { filter: brightness(1.1); color: #fff; }
-        
-        .search-box { 
-            background: rgba(0,0,0,0.4); 
-            border: 1px solid var(--primary); 
-            color: white; 
-            border-radius: 10px; 
-            padding: 12px;
+        .container-center {
+            text-align: center;
+            background: #1e1e1e;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid #333;
         }
-        .search-box:focus { background: rgba(0,0,0,0.6); color: white; border-color: var(--secondary); box-shadow: 0 0 10px var(--secondary); }
-        .search-box::placeholder { color: rgba(255,255,255,0.5); }
 
-        .info-card { border-right: 3px solid var(--primary); padding-right: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; }
-        
-        .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
-        .img-preview { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--secondary); transition: transform 0.2s; cursor: pointer; }
-        .img-preview:hover { transform: scale(1.1); z-index: 10; }
+        .title-gradient {
+            background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
 
-        pre { max-height: 600px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
-        
-        body.code-only-mode { overflow: hidden; }
-        body.code-only-mode .main-ui, body.code-only-mode .theme-badge { display: none !important; }
-        body.code-only-mode .code-section { 
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            z-index: 9999; background: var(--bg); padding: 0; margin: 0; 
+        .form-control {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 20px;
         }
-        body.code-only-mode .code-container { width: 100%; height: 100%; margin: 0; max-width: none; }
-        body.code-only-mode pre { 
-            height: calc(100vh - 50px) !important; 
-            max-height: none !important; 
-            border-radius: 0; 
-            margin: 0;
+        .form-control:focus {
+            background: #333;
+            color: white;
+            box-shadow: none;
+            border-color: #00C9FF;
         }
-        
-        .theme-badge { 
-            position: fixed; bottom: 20px; left: 20px; 
-            background: var(--primary); color: #000; 
-            padding: 5px 15px; border-radius: 20px; 
-            font-weight: bold; font-size: 12px; box-shadow: 0 0 15px var(--primary);
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            text-decoration: none;
+            margin-bottom: 15px;
+            transition: 0.3s;
+            cursor: pointer;
+            width: 100%;
         }
+
+        .btn-copy { background: #6c5ce7; }
+        .btn-html { background: #00cec9; color: #333; }
+        .btn-zip { background: linear-gradient(45deg, #fd79a8, #e84393); }
+        .btn-new { background: #636e72; font-size: 0.9rem; padding: 10px;}
+
+        .action-btn:hover { transform: scale(1.03); opacity: 0.9; color: white; }
+
+        .hidden-area { display: none; }
     </style>
 </head>
-<body class="container py-4">
-    
-    <div class="main-ui text-center mb-4">
-        <h1 class="display-5" style="color: var(--primary); font-weight: 800; text-shadow: 0 0 15px var(--primary);">Web-Scanner Pro</h1>
-        <p class="opacity-75">סורק אתרים מתקדם | מצב: <strong>{{ theme.name }}</strong></p>
-        
-        <div class="d-flex justify-content-center gap-2 mt-3">
-            <!-- שים לב: הכפתור מוביל ל /app1 -->
-            <a href="/app1" class="btn btn-sm btn-outline-light">החלף עיצוב רנדומלי 🎲</a>
-        </div>
-    </div>
+<body>
 
-    <div class="main-ui row justify-content-center">
-        <div class="col-lg-8">
-            <div class="glass-card p-4 mb-4">
-                <form action="/app1" method="GET" class="row g-2">
-                    <div class="col-md-9">
-                        <input type="text" name="url" class="form-control search-box" placeholder="הכנס כתובת אתר (למשל ynet.co.il)" value="{{ url }}" required>
-                        <input type="hidden" name="theme_idx" value="{{ theme_index }}">
-                    </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-gradient w-100 h-100">סרוק כעת 🚀</button>
-                    </div>
-                </form>
+    <div class="container-center">
+        {% if not has_results %}
+            <!-- מסך ראשי: חיפוש -->
+            <div class="title-gradient">Web Scanner</div>
+            <form action="/app2" method="POST">
+                <input type="text" name="url" class="form-control" placeholder="https://..." required>
+                <button type="submit" class="action-btn" style="background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%); color: #000;">
+                    סרוק כעת 🚀
+                </button>
+            </form>
+            {% if error %}
+                <div class="text-danger mt-2">{{ error }}</div>
+            {% endif %}
+
+        {% else %}
+            <!-- מסך תוצאות: רק כפתורים -->
+            <div class="title-gradient">הסריקה הושלמה! ✅</div>
+            
+            <button onclick="copyToClipboard()" class="action-btn btn-copy">
+                העתק קוד 📋
+            </button>
+            
+            <a href="/app2/download/html?target={{ encoded_url }}" class="action-btn btn-html">
+                הורד HTML 📄
+            </a>
+            
+            <a href="/app2/download/zip?target={{ encoded_url }}" class="action-btn btn-zip">
+                הורד חבילה מלאה (ZIP) 📦
+            </a>
+
+            <div class="mt-4 border-top pt-3 border-secondary">
+                <a href="/app2" class="action-btn btn-new">סרוק אתר אחר ↺</a>
             </div>
-        </div>
+
+            <!-- הקוד עצמו מוסתר כאן לצורך העתקה -->
+            <textarea id="hidden-code" class="hidden-area">{{ html_content }}</textarea>
+        {% endif %}
     </div>
 
-    {% if error %}
-    <div class="alert alert-danger text-center glass-card border-danger">
-        <h4>שגיאה בסריקה ⚠️</h4>
-        <p>{{ error }}</p>
-    </div>
-    {% endif %}
-
-    {% if html_content %}
-    <div class="main-ui row justify-content-center mb-4">
-        <div class="col-lg-10">
-            <div class="glass-card p-4">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <div class="info-card h-100">
-                            <h5 style="color: var(--secondary)">📄 פרטי דף</h5>
-                            <strong>כותרת:</strong> {{ metadata.title }}<br>
-                            <small class="d-block mt-2"><strong>תיאור:</strong> {{ metadata.description[:100] }}...</small>
-                            <div class="mt-3 badge bg-light text-dark">סה"כ תווים: {{ html_content|length }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="info-card h-100">
-                            <h5 style="color: var(--secondary)">🖼️ תמונות שנמצאו ({{ metadata.total_images }})</h5>
-                            {% if metadata.images %}
-                                <div class="img-grid mt-2">
-                                    {% for img in metadata.images %}
-                                        <a href="{{ img }}" target="_blank"><img src="{{ img }}" class="img-preview" onerror="this.style.display='none'"></a>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <p>לא נמצאו תמונות נגישות.</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="code-section row justify-content-center">
-        <div class="col-lg-12 code-container">
-            <div class="d-flex justify-content-between align-items-center mb-2 px-3">
-                <h5 class="m-0 text-light">קוד מקור (Source Code)</h5>
-                <div>
-                    <button class="btn btn-sm btn-outline-info" onclick="copyCode()">העתק הכל 📋</button>
-                    <button class="btn btn-sm btn-warning" onclick="toggleCodeOnly()">מצב מסך מלא 🖥️</button>
-                    <button class="btn btn-sm btn-danger exit-btn d-none" onclick="toggleCodeOnly()">✖ יציאה</button>
-                </div>
-            </div>
-            <pre><code id="main-code" class="language-html">{{ html_content | e }}</code></pre>
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="theme-badge">Design: {{ theme.name }}</div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
     <script>
-        function toggleCodeOnly() {
-            document.body.classList.toggle('code-only-mode');
-            document.querySelector('.exit-btn').classList.toggle('d-none');
-        }
-
-        function copyCode() {
-            const code = document.getElementById('main-code').textContent;
+        function copyToClipboard() {
+            const code = document.getElementById('hidden-code').value;
             navigator.clipboard.writeText(code).then(() => {
-                const btn = document.querySelector('.btn-outline-info');
-                const originalText = btn.textContent;
-                btn.textContent = 'הועתק! ✅';
-                setTimeout(() => btn.textContent = originalText, 2000);
+                const btn = document.querySelector('.btn-copy');
+                const orig = btn.innerText;
+                btn.innerText = 'הועתק בהצלחה! 👌';
+                setTimeout(() => btn.innerText = orig, 1500);
             });
         }
     </script>
@@ -234,55 +276,63 @@ HTML_PAGE = """
 </html>
 """
 
-# שינוי הנתיב (Route) להיות /app1 כנדרש
-@app.route('/', methods=['GET'])
-def proxy():
-    target_url = request.args.get('url', '').strip()
-    theme_idx_arg = request.args.get('theme_idx')
-    
-    # ניהול עיצוב: בחירה אקראית או שמירה על הקיים
-    if theme_idx_arg and theme_idx_arg.isdigit():
-        idx = int(theme_idx_arg) % len(THEMES)
-        selected_theme = THEMES[idx]
-        current_theme_index = idx
-    else:
-        selected_theme = random.choice(THEMES)
-        current_theme_index = THEMES.index(selected_theme)
+# --- מסלולים (Routes) ---
 
-    html_content = None
-    error = None
-    metadata = {}
-
-    if target_url:
-        target_url = fix_url(target_url) 
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        url = request.form.get('url')
         try:
-            # הוספת User-Agent כדי שהאתרים לא יחסמו את הסורק
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            response = requests.get(target_url, headers=headers, timeout=10)
+            session = requests.Session()
+            session.headers.update(HEADERS)
+            if not url.startswith('http'): url = 'https://' + url
             
-            # קידוד קריטי לעברית
-            response.encoding = response.apparent_encoding 
+            res = session.get(url, timeout=10)
+            res.encoding = res.apparent_encoding
             
-            html_content = response.text
-            metadata = extract_data(html_content, target_url)
+            # קידוד ה-URL כדי להעביר אותו בטוח לכפתורי ההורדה
+            from urllib.parse import quote
+            encoded_url = quote(url)
 
-        except requests.exceptions.MissingSchema:
-            error = "כתובת לא תקינה. וודא שהכתובת מתחילה ב-http או https"
-        except requests.exceptions.ConnectionError:
-            error = "לא ניתן להתחבר לשרת. בדוק את הכתובת."
+            return render_template_string(HTML_UI, 
+                                          has_results=True, 
+                                          html_content=res.text,
+                                          encoded_url=encoded_url)
         except Exception as e:
-            error = f"שגיאה כללית: {str(e)}"
+            return render_template_string(HTML_UI, has_results=False, error="שגיאה בסריקת האתר. וודא שהכתובת תקינה.")
+            
+    return render_template_string(HTML_UI, has_results=False)
 
-    return render_template_string(HTML_PAGE, 
-                                 html_content=html_content, 
-                                 error=error, 
-                                 url=target_url, 
-                                 theme=selected_theme,
-                                 theme_index=current_theme_index,
-                                 metadata=metadata)
+@app.route('/download/html')
+def download_html():
+    from urllib.parse import unquote
+    url = unquote(request.args.get('target'))
+    
+    try:
+        session = requests.Session()
+        session.headers.update(HEADERS)
+        res = session.get(url)
+        res.encoding = res.apparent_encoding
+        return Response(res.text, mimetype="text/html", headers={"Content-Disposition": "attachment; filename=scanned_page.html"})
+    except:
+        return "Error", 500
+
+@app.route('/download/zip')
+def download_zip_route():
+    from urllib.parse import unquote
+    url = unquote(request.args.get('target'))
+    
+    zip_buffer = generate_fixed_zip(url)
+    
+    if zip_buffer:
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name='website_complete.zip'
+        )
+    else:
+        return "שגיאה ביצירת הקובץ. ייתכן והאתר חוסם גישה.", 400
 
 if __name__ == '__main__':
-    # מפעיל את האפליקציה (ניתן לגשת דרך http://127.0.0.1:5000/app1)
     app.run(debug=True, port=5000)
