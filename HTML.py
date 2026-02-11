@@ -136,7 +136,7 @@ HTML_PAGE = """
         
         <div class="d-flex justify-content-center gap-2 mt-3">
             <!-- שים לב: הכפתור מוביל ל /app1 -->
-            <a href="/app1" class="btn btn-sm btn-outline-light">החלף עיצוב רנדומלי 🎲</a>
+            <a href="/html" class="btn btn-sm btn-outline-light">החלף עיצוב רנדומלי 🎲</a>
         </div>
     </div>
 
