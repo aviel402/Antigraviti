@@ -184,6 +184,8 @@ MENU_HTML = """
         <a href="/game7/" class="card"><span class="emoji-icon">🔥</span><h2>PROXIMA</h2><div class="tag">אסטרטגיית חלל</div></a>
         <a href="/game8/" class="card"><span class="emoji-icon">🦠</span><h2>הטפיל</h2><div class="tag">החלפת גופות</div></a>
         <a href="/game9/" class="card"><span class="emoji-icon">🍀</span><h2>CLOVER</h2><div class="tag">Action Platformer</div></a>
+        <a href="/php/" class="card"><span class="emoji-icon">🖥️</span><h2>php</h2><div class="tag"></div></a>
+        <a href="/html/" class="card"><span class="emoji-icon">💻</span><h2>html</h2><div class="tag"></div></a>
     </div>
 
     <footer>&copy; Aviel Aluf x0583289789@gmail.com</footer>
@@ -212,6 +214,7 @@ app = DispatcherMiddleware(main_app, {
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
