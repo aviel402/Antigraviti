@@ -207,13 +207,16 @@ app = DispatcherMiddleware(main_app, {
     '/game10': game10,
     '/game11': game11,
     '/php': php_app,
-    '/html': html_app
+    '/html': html_app,
+    '/app1': php_app,
+    '/app2': html_app
 })
 
 # --- 5. הרצה ---
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
