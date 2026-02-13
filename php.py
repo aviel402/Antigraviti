@@ -226,7 +226,7 @@ HTML_UI = """
         {% if not has_results %}
             <!-- מסך ראשי: חיפוש -->
             <div class="title-gradient">Web Scanner</div>
-            <form action="/app2" method="POST">
+            <form action="/php" method="POST">
                 <input type="text" name="url" class="form-control" placeholder="https://..." required>
                 <button type="submit" class="action-btn" style="background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%); color: #000;">
                     סרוק כעת 🚀
