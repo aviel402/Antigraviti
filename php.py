@@ -244,16 +244,16 @@ HTML_UI = """
                 העתק קוד 📋
             </button>
             
-            <a href="/app2/download/html?target={{ encoded_url }}" class="action-btn btn-html">
+            <a href="/php/download/html?target={{ encoded_url }}" class="action-btn btn-html">
                 הורד HTML 📄
             </a>
             
-            <a href="/app2/download/zip?target={{ encoded_url }}" class="action-btn btn-zip">
+            <a href="/php/download/zip?target={{ encoded_url }}" class="action-btn btn-zip">
                 הורד חבילה מלאה (ZIP) 📦
             </a>
 
             <div class="mt-4 border-top pt-3 border-secondary">
-                <a href="/app2" class="action-btn btn-new">סרוק אתר אחר ↺</a>
+                <a href="/php" class="action-btn btn-new">סרוק אתר אחר ↺</a>
             </div>
 
             <!-- הקוד עצמו מוסתר כאן לצורך העתקה -->
