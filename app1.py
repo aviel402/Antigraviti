@@ -124,7 +124,7 @@ GAME_HTML = """
     <!-- Win Screen -->
     <div id="scr-win" class="overlay">
         <div class="over-t" style="color:var(--main-c)">נ י צ ח ו ן</div>
-        <p>צוות החילוץ הגיע ביום ה-30.</p>
+        <p>צוות החילוץ הגיע ביום ה-20.</p>
         <button class="over-btn" onclick="location.reload()">שחק שוב</button>
     </div>
 
@@ -132,7 +132,7 @@ GAME_HTML = """
         
         <div class="header">
             <div>
-                <div class="day-info">יום <span id="val-day">1</span> <span style="font-size:14px; color:#555;">(יעד: 30)</span></div>
+                <div class="day-info">יום <span id="val-day">1</span> <span style="font-size:14px; color:#555;">(20)</span></div>
             </div>
             <div class="weather" id="txt-weather">☀️ בהיר ונעים</div>
         </div>
@@ -157,7 +157,7 @@ GAME_HTML = """
         </div>
 
         <div class="terminal" id="console">
-            <div class="ln sys">> Booting OS... OK.</div>
+            <div class="ln sys">>המשחק מתחיל!!!</div>
         </div>
 
         <!-- Inventory -->
@@ -246,7 +246,7 @@ GAME_HTML = """
 
                 // Game Over Check
                 if(this.s.hp <= 0) document.getElementById('scr-lose').style.display='flex';
-                if(this.day >= 30) document.getElementById('scr-win').style.display='flex';
+                if(this.day >= 20) document.getElementById('scr-win').style.display='flex';
             },
 
             log: function(txt, cls="sys") {
