@@ -1,62 +1,70 @@
-
 import random
 import uuid
 import time
 from collections import deque
-from threading import Thread
-from flask import Flask, request, redirect, make_response
+from flask import Flask, request, redirect, session
 from jinja2 import Environment, BaseLoader
 
 app = Flask(__name__)
-app.secret_key = "rpg_legend_secret"
+app.secret_key = "rpg_legend_secret_super_key_123" # חשוב שיישאר סודי
 
-# --- אופטימיזציה 1: הגדרת התבנית פעם אחת בלבד ---
-# במקום render_template_string בכל בקשה, אנחנו טוענים את התבנית לזיכרון פעם אחת.
+# חובה כדי שה-Cookie יישאר אחרי סגירת הדפדפן (שיחקנו בענן)
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 30 # שמירה ל-30 יום
 
+# --- HTML TEMPLATE ---
+# (הוספנו אנימציות למד החיים בצבע אדום ותנאי צביעת שורות Logs!)
 HTML_TEMPLATE_STR = """
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG Legends - Fast Version</title>
+    <title>RPG Legends - Serverless Version</title>
     <style>
-        body {
-            background-color: #1a1a1d; color: #c5c6c7; font-family: 'Segoe UI', Tahoma, sans-serif;
-            margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh;
-        }
-        .game-card {
-            background: #2b2e31; width: 100%; max-width: 500px; padding: 15px; border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5); border-top: 4px solid #66fcf1;
-        }
+        body { background-color: #1a1a1d; color: #c5c6c7; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .game-card { background: #2b2e31; width: 100%; max-width: 500px; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); border-top: 4px solid #66fcf1; }
         h2 { margin: 5px 0; color: #66fcf1; text-align: center; }
-        .stats { display: flex; justify-content: space-between; background: #0b0c10; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; }
-        .hp-container { background: #444; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 2px; }
-        .hp-fill { height: 100%; background: #ff4d4d; width: {{ (p.hp / p.max_hp) * 100 }}%; transition: width 0.3s; }
-        .scene {
-            background-color: #222; height: 150px; border-radius: 8px; margin-bottom: 15px; position: relative;
-            display: flex; justify-content: center; align-items: center; font-size: 40px; text-shadow: 0 0 10px black;
-        }
-        .scene-text { position: absolute; bottom: 5px; font-size: 14px; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 4px; color: white;}
-        .logs { background: #111; color: #45a29e; padding: 10px; height: 80px; overflow-y: auto; border-radius: 5px; margin-bottom: 15px; font-size: 13px; font-family: monospace; border: 1px solid #333; }
-        .log-line { margin-bottom: 4px; border-bottom: 1px solid #222; }
+        .stats { display: flex; justify-content: space-between; background: #0b0c10; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; font-weight: bold; }
+        
+        /* מד חיים משודרג ודינמי */
+        .hp-container { background: #444; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 4px; box-shadow: inset 0 0 5px black;}
+        .hp-fill { height: 100%; width: {{ (p.hp / p.max_hp) * 100 }}%; transition: width 0.3s ease-in-out; }
+        
+        {% set hp_percent = (p.hp / p.max_hp) %}
+        {% if hp_percent <= 0.3 %}
+        /* אזור סכנה: יהבהב באדום זוהר */
+        .hp-fill { background-color: #ff3333; animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0.5; } }
+        {% else %}
+        .hp-fill { background-color: #4CAF50; }
+        {% endif %}
+
+        .scene { background-color: #222; height: 150px; border-radius: 8px; margin-bottom: 15px; position: relative; display: flex; justify-content: center; align-items: center; font-size: 50px; text-shadow: 0 0 10px black; border: 2px solid #000; box-shadow: inset 0 0 30px rgba(0,0,0,0.8);}
+        .scene-text { position: absolute; bottom: 8px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 4px; color: #eee; border: 1px solid #444;}
+        
+        /* אזור ההודעות */
+        .logs { background: #0c0d11; color: #45a29e; padding: 10px; height: 90px; overflow-y: auto; border-radius: 5px; margin-bottom: 15px; font-size: 13.5px; font-family: 'Courier New', monospace; border: 1px solid #333; display:flex; flex-direction:column-reverse; }
+        .log-line { margin-bottom: 5px; border-bottom: 1px dotted #222; padding-bottom: 3px; }
+        .log-good { color: #5ce65c; }
+        .log-bad { color: #ff6666; }
+        .log-alert { color: #ffcc00; font-weight: bold; }
+
         .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button {
-            background: #1f2833; border: 1px solid #45a29e; color: white; padding: 15px;
-            font-size: 16px; cursor: pointer; border-radius: 8px; font-weight: bold; transition: 0.1s;
-        }
-        button:hover { background: #45a29e; color: black; }
+        button { background: #1f2833; border: 1px solid #45a29e; color: white; padding: 14px; font-size: 15px; cursor: pointer; border-radius: 8px; font-weight: bold; transition: all 0.2s; }
+        button:hover { background: #45a29e; color: black; transform: scale(1.02); }
         .combat-btn { background: #3e1212; border-color: #ff4d4d; }
+        .combat-btn:hover { background: #ff4d4d; color: white;}
         .heal-btn { background: #0f3d0f; border-color: #4dff4d; }
         .shop-btn { background: #3d3d0f; border-color: #ffff4d; }
-        a.back-menu { margin-top: 20px; color: #aaa; font-size: 12px; }
+        a.back-menu { margin-top: 20px; color: #888; font-size: 12px; text-decoration:none; transition: 0.2s;}
+        a.back-menu:hover { color: #fff;}
     </style>
 </head>
 <body>
     <div class="game-card">
         <h2>⚔️ ממלכת הצללים 🛡️</h2>
         <div class="stats">
-            <div>❤️ {{ p.hp }}/{{ p.max_hp }}<div class="hp-container"><div class="hp-fill"></div></div></div>
+            <div style="width:40%;">❤️ {{ p.hp }}/{{ p.max_hp }} <div class="hp-container"><div class="hp-fill"></div></div></div>
             <div>⭐ {{ p.level }}</div>
             <div>💰 {{ p.gold }}</div>
             <div>🧪 {{ p.potions }}</div>
@@ -69,321 +77,317 @@ HTML_TEMPLATE_STR = """
 
         <div class="logs">
             {% for log in p.logs %}
-                <div class="log-line">➜ {{ log }}</div>
+                {# מערכת חכמה לזיהוי טון ההודעה (רע/טוב/התרעה) וצביעתה #}
+                {% set log_class = "" %}
+                {% if "נפגעת" in log or "איבדת" in log or "חסר" in log or "מתת" in log or "הובסת" in log %} {% set log_class = "log-bad" %}
+                {% elif "שיקוי" in log or "שודרג" in log or "+הרווחת" in log or "מלאים" in log or "ניצחון" in log or "עלית לרמה" in log or "+" in log %} {% set log_class = "log-good" %}
+                {% elif "הופיע" in log or "קריטי" in log %} {% set log_class = "log-alert" %}
+                {% endif %}
+                
+                <div class="log-line {{ log_class }}">➜ {{ log }}</div>
             {% endfor %}
         </div>
 
         <div class="actions">
             {% if p.hp <= 0 %}
-                <button onclick="window.location.href='/game2/restart'" style="grid-column: span 2; background: red;">☠️ מתת! התחל מחדש</button>
+                <button onclick="window.location.href='/restart'" style="grid-column: span 2; background: #990000; border:2px solid red;">☠️ מסעך הסתיים. לחץ להתחלה חדשה</button>
             {% elif p.in_combat %}
-                <button class="combat-btn" onclick="window.location.href='/game2/action/attack'">⚔️ התקפה</button>
-                <button class="heal-btn" onclick="window.location.href='/game2/action/heal'">🧪 שיקוי</button>
-                <button onclick="window.location.href='/game2/action/flee'">🏃 ברח</button>
+                <button class="combat-btn" onclick="window.location.href='/action/attack'">⚔️ התקפה על {{p.current_enemy.name}}</button>
+                <button class="heal-btn" onclick="window.location.href='/action/heal'">🧪 השתמש בשיקוי</button>
+                <button onclick="window.location.href='/action/flee'">🏃 נסיגה פחדנית</button>
             {% elif p.location == 'town' %}
-                <button onclick="window.location.href='/game2/travel/forest'">🌲 צא ליער (1-3)</button>
-                <button style="border-color: red" onclick="window.location.href='/game2/travel/cave'">💀 למערת הבוס</button>
-                <button class="shop-btn" onclick="window.location.href='/game2/shop/buy_potion'">🧪 קנה שיקוי (30)</button>
-                <button class="shop-btn" onclick="window.location.href='/game2/shop/upgrade_weapon'">⚔️ שדרג נשק (100)</button>
-                <button class="heal-btn" onclick="window.location.href='/game2/action/inn'">🏨 פונדק (10)</button>
+                <button onclick="window.location.href='/travel/forest'">🌲 צא לסייר ביער</button>
+                <button style="border-color: red" onclick="window.location.href='/travel/cave'">🦇 למערת הבוס המפחידה</button>
+                <button class="shop-btn" onclick="window.location.href='/shop/buy_potion'">🧪 קנה שיקוי חיים (30ג)</button>
+                <button class="shop-btn" onclick="window.location.href='/shop/upgrade_weapon'">⚔️ שדרג עוצמת נשק ({{ p.weapon_level * 100 }}ג)</button>
+                <button class="heal-btn" onclick="window.location.href='/action/inn'">🏨 נוח בפונדק (10ג)</button>
             {% elif p.location == 'forest' or p.location == 'cave' %}
-                <button class="combat-btn" onclick="window.location.href='/game2/action/explore'">🔍 סייר (חפש)</button>
-                <button onclick="window.location.href='/game2/travel/town'">🏠 לעיר</button>
+                <button class="combat-btn" onclick="window.location.href='/action/explore'">🔍 חפש צרות / המשך באזור</button>
+                <button onclick="window.location.href='/travel/town'">🏠 חזור לעיר הבטוחה</button>
             {% endif %}
         </div>
     </div>
-    <a href="/" class="back-menu">תפריט ראשי</a>
 </body>
 </html>
 """
 
-# יצירת סביבת ג'ינג'ה מהירה
 jinja_env = Environment(loader=BaseLoader())
 game_template = jinja_env.from_string(HTML_TEMPLATE_STR)
 
-
-# --- מסד נתונים פנימי ---
-players = {}
-
-# ניקוי שחקנים לא פעילים (למנוע פיצוץ זיכרון)
-def cleanup_inactive_players():
-    current_time = time.time()
-    inactive_limit = 3600  # שעה אחת
-    to_remove = [uid for uid, p in players.items() if current_time - p.last_active > inactive_limit]
-    for uid in to_remove:
-        del players[uid]
-
-# --- מחלקות המשחק משופרות ---
+# --- MODELS / Classes - Vercel Serverless Ready ---
+# פונקציות העוזרות האלו יהפכו את השחקן ממילון בזיכרון חזרה למחלקות פייתון וההפך
 
 class Enemy:
-    # __slots__ חוסך המון זיכרון ומונע יצירת מילון לכל אובייקט
-    __slots__ = ['name', 'level', 'max_hp', 'hp', 'damage', 'xp_reward', 'gold_reward']
-    
-    def __init__(self, name, level):
+    def __init__(self, name, level, hp=None):
         self.name = name
         self.level = level
         self.max_hp = 20 + (level * 10)
-        self.hp = self.max_hp
+        self.hp = hp if hp is not None else self.max_hp
         self.damage = 3 + (level * 2)
         self.xp_reward = 20 * level
         self.gold_reward = random.randint(10, 25) * level
+        
+    def to_dict(self):
+        return {"name": self.name, "level": self.level, "hp": self.hp}
+        
+    @classmethod
+    def from_dict(cls, data):
+        if not data: return None
+        return cls(data["name"], data["level"], data["hp"])
 
 class Player:
-    # שימוש ב-Slots לביצועים וחיסכון ב-RAM
-    __slots__ = ['id', 'name', 'hp', 'max_hp', 'level', 'xp', 'next_level_xp', 
-                 'gold', 'damage', 'potions', 'location', 'in_combat', 
-                 'current_enemy', 'weapon_level', 'logs', 'last_active']
+    def __init__(self, data=None):
+        if data:
+            self.id = data.get("id", str(uuid.uuid4()))
+            self.hp = data.get("hp", 100)
+            self.max_hp = data.get("max_hp", 100)
+            self.level = data.get("level", 1)
+            self.xp = data.get("xp", 0)
+            self.next_level_xp = data.get("next_level_xp", 100)
+            self.gold = data.get("gold", 50)
+            self.damage = data.get("damage", 10)
+            self.potions = data.get("potions", 3)
+            self.location = data.get("location", "town")
+            self.in_combat = data.get("in_combat", False)
+            self.current_enemy = Enemy.from_dict(data.get("current_enemy"))
+            self.weapon_level = data.get("weapon_level", 1)
+            # משתמשים ברשימה ל-session, מוגבל לעד 5 פריטים אחרונים (הראשון זה הישן ביותר)
+            self.logs = data.get("logs", ["ברוכים הבאים לממלכה."])
+        else:
+            self.id = str(uuid.uuid4())
+            self.hp = 100; self.max_hp = 100; self.level = 1
+            self.xp = 0; self.next_level_xp = 100; self.gold = 50
+            self.damage = 10; self.potions = 3
+            self.location = "town"
+            self.in_combat = False; self.current_enemy = None
+            self.weapon_level = 1
+            self.logs =["הגעת לממלכה. הבס את האויבים כדי לשרוד."]
 
-    def __init__(self):
-        self.id = str(uuid.uuid4())
-        self.name = "גיבור"
-        self.hp = 100
-        self.max_hp = 100
-        self.level = 1
-        self.xp = 0
-        self.next_level_xp = 100
-        self.gold = 50
-        self.damage = 10
-        self.potions = 3
-        self.location = "town"
-        self.in_combat = False
-        self.current_enemy = None
-        self.weapon_level = 1
-        # שימוש ב-Deque - רשימה מהירה מאוד ששומרת רק את ה-5 האחרונים
-        self.logs = deque(["הגעת לממלכה. המטרה: הבס את אביר הצללים במערה."], maxlen=5)
-        self.last_active = time.time()
-
-    def touch(self):
-        # מעדכן זמן פעילות אחרון
-        self.last_active = time.time()
+    def to_dict(self):
+        return {
+            "id": self.id, "hp": self.hp, "max_hp": self.max_hp, "level": self.level,
+            "xp": self.xp, "next_level_xp": self.next_level_xp, "gold": self.gold,
+            "damage": self.damage, "potions": self.potions, "location": self.location,
+            "in_combat": self.in_combat, "weapon_level": self.weapon_level,
+            "logs": self.logs,
+            "current_enemy": self.current_enemy.to_dict() if self.current_enemy else None
+        }
 
     def add_log(self, text):
-        # deque מטפל לבד במחיקת הישנים (O(1))
-        self.logs.appendleft(text)
+        self.logs.insert(0, text)
+        if len(self.logs) > 6:
+            self.logs.pop() # שומר על ערימה קטנה ולא זולל מקום בעוגייה (Cookie)
 
     def heal(self):
         if self.potions > 0:
             if self.hp >= self.max_hp:
-                self.add_log("החיים שלך מלאים!")
+                self.add_log("החיים שלך מלאים לחלוטין! לא נדרש ריפוי.")
                 return
-            heal_amount = 40
+            heal_amount = 40 + (self.level * 5) # ככל שאתה רמה גבוהה השיקויים יותר חזקים
             self.hp = min(self.max_hp, self.hp + heal_amount)
             self.potions -= 1
-            self.add_log(f"שתית שיקוי. החיים: {self.hp}. נותרו {self.potions}.")
+            self.add_log(f"שתית שיקוי מרענן! נותרו {self.potions} 🧪.")
         else:
-            self.add_log("אין לך שיקויים! לך לחנות.")
+            self.add_log("אין לך שיקויים בכלל... חזור לחנות!")
 
     def gain_xp(self, amount):
         self.xp += amount
-        self.add_log(f"קיבלת {amount} נק\"ן!")
+        self.add_log(f"+ צברת {amount} XP")
         if self.xp >= self.next_level_xp:
-            self.level_up()
+            self.level += 1
+            self.xp -= self.next_level_xp
+            self.next_level_xp = int(self.next_level_xp * 1.5)
+            self.max_hp += 20
+            self.hp = self.max_hp
+            self.damage += 6
+            self.add_log(f"🎉 ייאיי! עלית לרמה {self.level}!")
 
-    def level_up(self):
-        self.level += 1
-        self.xp = 0
-        self.next_level_xp = int(self.next_level_xp * 1.5)
-        self.max_hp += 20
-        self.hp = self.max_hp
-        self.damage += 5
-        self.add_log(f"🎉 עלית לרמה {self.level}!")
+# --- Serverless STATE MGMT ---
 
-
-# --- Helper Functions ---
-
-def get_player():
-    # פונקציה אופטימלית יותר - בודקת ומעדכנת זמן באותה פעולה
-    uid = request.cookies.get('rpg_uid')
-    if uid and uid in players:
-        p = players[uid]
-        p.touch()
-        # מפעיל ניקוי רק אחת ל-50 בקשות בערך כדי לא להכביד
-        if random.random() < 0.02: 
-            cleanup_inactive_players()
-        return p
+def load_player():
+    data = session.get('player_data')
+    if data: return Player(data)
     return None
 
-def create_new_player():
-    new_p = Player()
-    players[new_p.id] = new_p
-    return new_p
+def save_player(player):
+    session.permanent = True  # מעדכן זמן כדי לא לנתק אותך
+    session['player_data'] = player.to_dict()
 
 # --- Routes ---
+# הורדתי פה את "game2" - פשוט תיכנס מראוט השורש (/). ככה קל ונוח יותר בVercel.
 
 @app.route('/')
 def home():
-    # נתיב זה מיועד כאשר הפנייה היא ישירות (בלי DispatcherMiddleware)
-    # בקוד המקורי השתמשת ב /game2/ בהפניה, אנחנו שומרים על הלוגיקה
-    # אבל כאן ה-App הוא הראשי.
-    p = get_player()
+    p = load_player()
     if not p:
-        p = create_new_player()
-        resp = redirect('/game2/') 
-        resp.set_cookie('rpg_uid', p.id, max_age=86400) # Cookie for 24 hours
-        return resp
+        p = Player()
+        save_player(p)
+        return redirect('/')
 
-    # הגדרות תצוגה
-    bg_color = "#333"
-    icon = "🏠"
-    loc_name = "הכפר הבטוח"
+    bg_color = "#20252a"
+    icon = "🏘️"
+    loc_name = "העיר המרכזית (בטוח)"
 
-    # גישה ישירה משפרת ביצועים על פני בדיקות מיותרות
     if p.in_combat:
-        bg_color = "#4a1c1c"
+        # אזור מדמם כשנמצאים בקרב
+        bg_color = "#361616"
         e = p.current_enemy
-        icon = f"😈 {e.name} (Lv{e.level})"
-        loc_name = "זירת קרב"
+        icon = f"😈 {e.name} "
+        loc_name = f"בקרב עד מוות! (Lv.{e.level})"
     elif p.location == "forest":
-        bg_color = "#1b4d3e"
-        icon = "🌲🌲🌲"
-        loc_name = "היער האפל"
+        bg_color = "#163520"
+        icon = "🌳 🌲 🌳"
+        loc_name = "שולי יער המפלצות"
     elif p.location == "cave":
-        bg_color = "#2c2c2c"
-        icon = "🦇🏔️🦇"
-        loc_name = "מערת האבדון"
+        bg_color = "#121215"
+        icon = "🦇 🏔️ 🦇"
+        loc_name = "מערת חושך ואופל"
 
-    # רינדור מהיר עם התבנית המקומפלת מראש
+    # שמירה אחרונה לפני רינדור (כדי לכלול לוגים או כל שינוי מזערי אחר)
+    save_player(p)
     return game_template.render(p=p, bg_color=bg_color, emoji_icon=icon, location_name=loc_name)
 
 @app.route('/restart')
 def restart():
-    p = create_new_player()
-    resp = redirect('/game2/')
-    resp.set_cookie('rpg_uid', p.id, max_age=86400)
-    return resp
+    session.clear()
+    return redirect('/')
 
 @app.route('/travel/<destination>')
 def travel(destination):
-    p = get_player()
-    if not p or p.hp <= 0 or p.in_combat: return redirect('/game2/')
+    p = load_player()
+    if not p or p.hp <= 0 or p.in_combat: return redirect('/')
     
-    # אופטימיזציה: שימוש ב-Set לבדיקה מהירה במקום If/Or
     valid_locations = {"town", "forest", "cave"}
-    if destination not in valid_locations: return redirect('/game2/')
+    if destination not in valid_locations: return redirect('/')
 
     if destination == "cave" and p.level < 3:
-        p.add_log("השומר: 'רק לוחמים ברמה 3+!'")
+        p.add_log("השומר המאיים: 'רק לוחמים ברמה 3+ מורשים להיכנס לפה!'")
     else:
         p.location = destination
-        p.add_log(f"עברת ל-{destination}.")
+        p.add_log(f"מסע מהיר. הגעת אל -> {destination}.")
     
-    return redirect('/game2/')
+    save_player(p)
+    return redirect('/')
 
 @app.route('/shop/<action>')
 def shop(action):
-    p = get_player()
-    if not p or p.location != "town": return redirect('/game2/')
+    p = load_player()
+    if not p or p.location != "town": return redirect('/')
 
     if action == "buy_potion":
         if p.gold >= 30:
             p.gold -= 30
             p.potions += 1
-            p.add_log("קנית שיקוי.")
+            p.add_log("עסקת חליפין הושלמה! יש לך שיקוי נוסף.")
         else:
-            p.add_log("חסר זהב (30).")
-    
+            p.add_log("הסוחר דחה אותך, חסר זהב לשיקוי (דרוש 30).")
     elif action == "upgrade_weapon":
         cost = p.weapon_level * 100
         if p.gold >= cost:
             p.gold -= cost
-            p.damage += 5
+            p.damage += 6
             p.weapon_level += 1
-            p.add_log(f"נשק שודרג! נזק: {p.damage}")
+            p.add_log(f"הנפח החדיד את נשקך! רמת נזק כעת: {p.damage}")
         else:
-            p.add_log(f"חסר זהב ({cost}).")
+            p.add_log(f"חסר מספיק זהב לנפח לשדרוג הבא ({cost}).")
 
-    return redirect('/game2/')
+    save_player(p)
+    return redirect('/')
 
 @app.route('/action/<act>')
 def perform_action(act):
-    p = get_player()
-    if not p: return redirect('/game2/')
+    p = load_player()
+    if not p: return redirect('/')
 
-    # קיבוץ הפעולות לביצועים ונקיון קוד
-    
-    if act == "explore" and not p.in_combat:
-        if p.hp <= 0: return redirect('/game2/')
-        # חישוב מתמטי מהיר
-        if random.random() > 0.7:
-            p.add_log("אין אויבים באזור.")
+    if act == "explore" and not p.in_combat and p.hp > 0:
+        if random.random() > 0.65: # סיכוי משופר לפגוש שקט (טוב לכיס ולחקירה)
+            p.add_log("האזור כרגע שקט לחלוטין, איש לא בסביבה.")
         else:
             start_combat(p)
 
-    elif act == "attack" and p.in_combat:
-        handle_combat_round(p) # העברנו לפונקציה נפרדת לקריאות
+    elif act == "attack" and p.in_combat and p.hp > 0:
+        handle_combat_round(p)
 
-    elif act == "heal":
-        p.heal()
-        if p.in_combat:
-            enemy_turn(p)
+    elif act == "heal" and p.hp > 0:
+        if p.potions > 0:
+            p.heal()
+            if p.in_combat:
+                enemy_turn(p) # יריב מכה אותך כשאתה שותה שיקוי
+        else:
+            p.add_log("אתה בקרב ואין לך שיקוי! אלוקים אדירים!!")
 
     elif act == "flee" and p.in_combat:
-        loss = int(p.gold * 0.2)
+        loss = int(p.gold * 0.15) # רק 15% מס לבריחה
         p.gold -= loss
         p.in_combat = False
-        p.add_log(f"ברחת! איבדת {loss} זהב.")
+        p.current_enemy = None
+        p.add_log(f"ברחת אל היער בבושת פנים, נפלו לך {loss} זהב במהלך הריצה.")
 
     elif act == "inn" and p.location == "town":
         if p.gold >= 10:
             p.gold -= 10
             p.hp = p.max_hp
-            p.add_log("ישנת בפונדק. חיים מלאים! 💤")
+            p.add_log("השינה במיטה הפכה את הקרביים מחדש. אתה בחיים מלאים! 💤")
         else:
-            p.add_log("חסר זהב ללינה (10).")
+            p.add_log("איך תישן בלי כסף לשכירות? (חסר לך זהב).")
 
-    return redirect('/game2/')
+    save_player(p)
+    return redirect('/')
 
-# --- Combat Logic Optimized ---
 
-ENEMIES_FOREST = [("זאב רעב", 1), ("שדון יער", 2), ("עכביש ענק", 3)]
-ENEMIES_CAVE = [("עטלף ערפד", 4), ("שומר שלד", 5), ("אביר הצללים", 10)]
+# --- תורת לחימה וניהול קרב חכם ---
+ENEMIES_FOREST =[("זאב צעיר קודח", 1), ("זחל ביצות מזוהם", 2), ("עכביש שמונה עייניים", 3)]
+ENEMIES_CAVE =[("עטלף לילה מוצץ", 4), ("גולם מאבנים חותך", 6), ("⚔️ אביר המימדים הרעים (בוס) ⚔️", 10)]
 
 def start_combat(p):
-    # שימוש בטבלאות קבועות מראש (Global Consts) כדי לא ליצור Lists בכל פעם
     if p.location == "forest":
         choice = random.choice(ENEMIES_FOREST)
-    else: # cave
+    else: 
         choice = random.choice(ENEMIES_CAVE)
-        if choice[0] == "אביר הצללים" and p.level < 6:
-            choice = ("שומר שלד חזק", 5)
+        if choice[1] == 10 and p.level < 6: # אין טעם לפגוש את הבוס מוקדם
+            choice = ("צל משוטט בחושך", 5)
 
     p.current_enemy = Enemy(choice[0], choice[1])
     p.in_combat = True
-    p.add_log(f"⚠️ {p.current_enemy.name} (Lv{p.current_enemy.level}) הופיע!")
+    p.add_log(f"מארב פתע! {p.current_enemy.name} מזנק עליך!")
 
 def handle_combat_round(p):
     enemy = p.current_enemy
     
-    # חישוב נזק
-    is_crit = random.random() > 0.8
-    dmg = p.damage * 2 if is_crit else p.damage
+    is_crit = random.random() > 0.75 # 25% סבירות לקריט
+    dmg = int(p.damage * 1.5) if is_crit else p.damage
     enemy.hp -= dmg
     
-    # בנית מחרוזת פעם אחת
-    msg = f"גרמת {dmg} נזק" + (" (קריטי!)" if is_crit else "")
-    p.add_log(msg)
+    if is_crit:
+        p.add_log(f"⚡ מכה אנושה יפיפייה! השטן חטף {dmg} נזק.")
+    else:
+        p.add_log(f"תקפת חזיתית - ירדו לאויב {dmg} מגן וחיים.")
 
     if enemy.hp <= 0:
         p.in_combat = False
         p.gold += enemy.gold_reward
         p.gain_xp(enemy.xp_reward)
-        p.add_log(f"🏆 ניצחון! +{enemy.gold_reward} זהב.")
-        
-        if enemy.name == "אביר הצללים":
-            p.add_log("🔥 ניצחת את המשחק! 🔥")
+        p.current_enemy = None
+        p.add_log(f"🏆 רשמת ניצחון מזהיר! זכית ב: +{enemy.gold_reward} מטבעות.")
     else:
         enemy_turn(p)
 
 def enemy_turn(p):
     enemy = p.current_enemy
-    damage = max(1, enemy.damage - random.randint(0, 2))
-    p.hp -= damage
-    p.add_log(f"נפגעת ב-{damage} נזק.")
-    
+    # הוספת שירוניות - מקריות להגנה מאויב פה יוצר חיוות שחקן דינמית. 
+    evade = random.random() > 0.88 # סיכוי התחמקות 12% מהמתקפה שלו
+    if evade:
+         p.add_log(f"מזל משמיים! הצלחת לחמוק כליל ממכה של האויב!")
+    else:
+         damage = max(1, enemy.damage - random.randint(1, 4))
+         p.hp -= damage
+         p.add_log(f"ספגת פגיעה מטרידה של {damage} נקודות. תגובתך דחופה.")
+         
     if p.hp <= 0:
-        p.add_log("☠️ הובסת...")
-        p.in_combat = False
+         p.add_log("☠️ האור בעיניים הופך למעורפל. החלקת דממת מוות...")
+         p.in_combat = False
+         p.hp = 0
 
 if __name__ == '__main__':
-    # Threaded=True מאפשר טיפול בכמה בקשות במקביל
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    # מושלם לפיתוח ולרוץ בטוח ברשת
+    app.run(host='0.0.0.0', port=5000, debug=True)
