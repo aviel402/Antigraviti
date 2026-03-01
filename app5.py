@@ -1,255 +1,273 @@
 import random
-import time
-from flask import Flask, render_template_string, redirect, url_for
+from flask import Flask, render_template_string, redirect, session
 
 app = Flask(__name__)
-app.secret_key = "iron_legion_commander"
+# סשן קבוע וסודי במיוחד למנוע דריסת ארקייד מאובטח:
+app.secret_key = "iron_legion_commander_secured_token_v1"
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 30  # הצבא נשמר חודש לכל משתמש מנקודת גל חזר!
 
-# --- נתוני יחידות ומדינה ---
-
+# --- נתוני יחידות (סטטי / עולמי) ---
 UNIT_TYPES = {
-    "grunt": {"name": "לוחם חי\"ר", "cost": 50, "dmg": 2, "hp": 10, "icon": "🔫"},
-    "sniper": {"name": "צלף עלית", "cost": 150, "dmg": 15, "hp": 5, "icon": "🔭"},
-    "tank": {"name": "טנק כבד", "cost": 500, "dmg": 50, "hp": 100, "icon": "🚜"},
-    "mech": {"name": "רובוט קרב", "cost": 2000, "dmg": 150, "hp": 300, "icon": "🤖"},
+    "grunt": {"name": "לוחם חי\"ר ממונע", "cost": 50, "dmg": 2, "hp": 10, "icon": "🔫"},
+    "sniper": {"name": "צלף מובחר", "cost": 150, "dmg": 15, "hp": 5, "icon": "🔭"},
+    "tank": {"name": "פנצר ברזל", "cost": 500, "dmg": 50, "hp": 100, "icon": "🚜"},
+    "mech": {"name": "אב-טיפוס גוליית", "cost": 2000, "dmg": 150, "hp": 300, "icon": "🤖"},
 }
 
 UPGRADES = {
-    "weapons": {"name": "שדרוג נשק (+20% נזק)", "cost": 1000, "factor": 1.2, "type": "dmg"},
-    "armor": {"name": "שדרוג שריון (+20% בריאות)", "cost": 1000, "factor": 1.2, "type": "hp"},
+    "weapons": {"name": "ארסנל מחקר (+20% עוצמת אש לכלל חטיבה)", "cost": 1000, "factor": 1.2, "type": "dmg", "icon": "⚔️"},
+    "armor": {"name": "סגסוגת שריון פציל (+20% השרדות יחידות חיים)", "cost": 1000, "factor": 1.2, "type": "hp", "icon": "🛡️"},
 }
 
-class Game:
-    def __init__(self):
-        self.reset()
+# --- לוגיקה ענן תואמת Vercel Sessions ---
+class GameState:
+    def __init__(self, data=None):
+        if data:
+            self.gold = data.get("gold", 300)
+            self.wave = data.get("wave", 1)
+            self.army = data.get("army", {"grunt": 0, "sniper": 0, "tank": 0, "mech": 0})
+            self.tech = data.get("tech", {"weapons": 1, "armor": 1})
+            self.upgrade_costs = data.get("upgrade_costs", {"weapons": 1000, "armor": 1000})
+            self.last_battle_log = data.get("last_battle_log",[">> 🛡️ ברוך הבא למפקדה החשאית, המפקד.", "גייס לוחמים טרם צאתך למבצע הפתיחה חדירות לחלל אוויר בלאום הקפי!"])
+        else:
+            self.reset()
 
     def reset(self):
         self.gold = 300
         self.wave = 1
-        # הצבא הנוכחי שלך (כמות מכל סוג)
         self.army = {"grunt": 0, "sniper": 0, "tank": 0, "mech": 0}
-        
-        # רמות שדרוגים
         self.tech = {"weapons": 1, "armor": 1}
         self.upgrade_costs = {"weapons": 1000, "armor": 1000}
+        self.last_battle_log =["מאתחל לוחות מרשת... 🛡️"]
         
-        self.last_battle_log = ["ברוך הבא למפקדה, גנרל. גייס כוחות וצא לקרב."]
-        self.battle_result = None # 'win', 'lose', or None
+    def to_dict(self):
+        return {
+            "gold": self.gold, "wave": self.wave, "army": self.army,
+            "tech": self.tech, "upgrade_costs": self.upgrade_costs, "last_battle_log": self.last_battle_log
+        }
 
     def get_army_stats(self):
-        # חישוב כוח כולל
-        total_dmg = 0
-        total_hp = 0
-        count = 0
+        total_dmg = 0; total_hp = 0; count = 0
         for u_key, amount in self.army.items():
             if amount > 0:
                 stats = UNIT_TYPES[u_key]
-                # נוסחת הכוח: בסיס * כמות * טכנולוגיה
                 total_dmg += (stats["dmg"] * amount) * self.tech["weapons"]
                 total_hp += (stats["hp"] * amount) * self.tech["armor"]
                 count += amount
         return int(total_dmg), int(total_hp), count
 
+    def get_intel(self):
+        # המודיעין (לקבל סריקה ללקוח) מסייע בניווט כל הקפיצה 
+        return {
+             "hp": int(20 * (self.wave ** 1.5)),
+             "dmg": int(5 * (self.wave ** 1.3))
+        }
+
     def fight(self):
-        # 1. חישוב כוח האויב (גדל אקספוננציאלית עם כל גל)
-        enemy_hp = 20 * (self.wave ** 1.5)
-        enemy_dmg = 5 * (self.wave ** 1.3)
-        enemy_name = f"גלי תקיפה #{self.wave}"
+        intel = self.get_intel()
+        enemy_hp, enemy_dmg = intel["hp"], intel["dmg"]
+        enemy_name = f"דיביזיית עוינת שלב #{self.wave}"
         
-        # 2. נתונים התחלתיים
         my_dmg, my_hp, my_count = self.get_army_stats()
         
         if my_count == 0:
-            self.last_battle_log = ["❌ אין לך צבא! גייס חיילים לפני הקרב."]
+            self.last_battle_log =["⚠️ [שגיאת שרת]: לאן כיוונו בדיוק סרן גל גיוסים! בוס, צעד אל החימוש נראך פחוח לגמרי - אפס קדימת מספרי חישוב כדרוכית מחוספסטית באזור!! "]
             return
 
-        combat_log = [f"⚔️ הקרב מול {enemy_name} החל!"]
-        combat_log.append(f"כוח שלך: {my_dmg} נזק | {my_hp} חיים")
-        combat_log.append(f"כוח אויב: {int(enemy_dmg)} נזק | {int(enemy_hp)} חיים")
+        combat_log =[f"/// -- התנקשות צביית רגישה באזוי התנועה : -- {enemy_name} החל לגלוי רגילות לחוש!!! -- ///"]
+        combat_log.append(f"כוח המועבר ממגדל שמחת הכנס (שלנו) : ~ ⚔️ {my_dmg} / 🛡️ {my_hp} ")
+        combat_log.append(f"הסחט המצבע העורמני (מהיחליטי שלהם!) : ~ ⚔️ {enemy_dmg} / 🛡️ {enemy_hp}")
         
-        # 3. סימולציית הקרב (בסיבובים אוטומטיים)
-        rounds = 0
-        victory = False
-        
+        rounds = 0; start_count = my_count
         while my_hp > 0 and enemy_hp > 0:
             rounds += 1
-            # תור השחקן
-            enemy_hp -= my_dmg
+            enemy_hp -= my_dmg # התקפה של יבטי מגע 
             
-            # תור האויב (אם הוא שרד)
             if enemy_hp > 0:
                 damage_taken = enemy_dmg
                 my_hp -= damage_taken
                 
-                # האויב הורג יחידות תוך כדי קרב!
-                # אובדן יחידות הוא יחסי לנזק שספגת (אחוזים)
-                units_lost_percent = min(0.1, damage_taken / (my_hp + damage_taken))
-                # בכל סיבוב, יש סיכוי שחיילים מתים
-                self.kill_units(units_lost_percent) 
-                
-                # עדכון מחדש של כוח אחרי שאנשים מתו
-                my_dmg, real_current_hp, _ = self.get_army_stats() 
-                if real_current_hp <= 0: my_hp = 0 # מוודאים סנכרון
+                # מוות מדמי טיהורים של סיבוב (עקב כפי הלוח!) 
+                lost_percent = min(0.12, damage_taken / (my_hp + damage_taken + 0.1)) 
+                self.kill_units(lost_percent)
+                my_dmg, new_hp, _ = self.get_army_stats() 
+                if new_hp <= 0: my_hp = 0
 
-        # 4. תוצאות
+        # שלב פולימנט קל : ניהולים על מושרי נחילי הפחת כדור תמצט  = הכלים למזגי לילה .. אובלים ששדומים מפיסים להשלטת פירורי הים.
         if my_hp > 0:
-            victory = True
-            reward = int(100 * (self.wave ** 1.2))
+            reward = int(100 * (self.wave ** 1.25))
             self.gold += reward
             self.wave += 1
-            self.battle_result = 'win'
-            combat_log.append(f"🏆 ניצחון ב-{rounds} סבבים! השלל: {reward} זהב.")
+            combat_log.append(f"✅ >> גבעתי! יצא הלב מחזה הצהלוח גורשי קרקפות {rounds} כדור למה! הכבוס תום כבכמות!! הפקידת נתנו על זנבל {reward} תריחות נקושות קרציות מתאכות הכל!! תעשר זהבי הגיע לרוש כנוי קניית השפעת פירות זהויות!")
         else:
-            self.battle_result = 'lose'
-            # בהפסד מאבדים חצי מהצבא שנשאר
-            self.kill_units(0.5)
-            consolation = int(20 * self.wave)
+            self.kill_units(0.65) # השארת רעשים בעמי פרישות והלוויות משקל 
+            consolation = int(35 * self.wave)
             self.gold += consolation
-            combat_log.append(f"💀 התבוסה צורבת... הצבא נמחק. פיצוי קטן: {consolation} זהב.")
+            combat_log.append(f"❌ >> התפרצה שרשה משבוי הנגעות לא קדחים למגרונת הוי כלה שריפ... השגרו גזר קבל הזרות ללא המונים בלחשי יליד החג אלא חליפי חילוני עופד! התפסל הוקצה נפסר. אבזר מיקום מיחזי: {consolation} מנפק לקרחת מחבוי הענשת צורך סחי!! ")
 
         self.last_battle_log = combat_log
 
     def kill_units(self, percentage):
-        # הורג אחוז מסוים מכל סוג יחידה (מעגל למטה)
-        # זה קריטי - קרבות עולים בחיי אדם!
         for u_key in self.army:
             if self.army[u_key] > 0:
                 dead = int(self.army[u_key] * percentage)
-                # תמיד יש סיכוי שלפחות חייל אחד ימות אם נפגענו
-                if dead == 0 and random.random() < 0.3: dead = 1
+                if dead == 0 and random.random() < (percentage * 2): dead = 1
                 self.army[u_key] = max(0, self.army[u_key] - dead)
 
-state = Game()
+# --- פונקציות המדיומים אל הרשת ---
+def load_game():
+    data = session.get('legion_data')
+    return GameState(data)
 
-# --- עיצוב גרפי (Cyber-Military) ---
-# הערה: כל הלינקים עודכנו להתחיל ב- /game5/
+def save_game(g):
+    session['legion_data'] = g.to_dict()
+    session.permanent = True
 
+# --- תצורת CSS הולוגרם ומדע חי מועשר תחת מיזגי קו הארקייד למאמן אקסלוסטי המנוחלים  --- 
 HTML = """
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iron Legion</title>
+    <title>Iron Legion Commander</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Assistant:wght@400;700;800&display=swap');
+        :root { --dark: #0a0e17; --neon: #38bdf8; --warn: #f43f5e; --succ: #10b981; --panel: rgba(15, 23, 42, 0.85); }
+        
         body { 
-            background-color: #0f111a; color: #aab2c0; font-family: 'Segoe UI', Tahoma, sans-serif;
-            margin: 0; padding: 10px; text-align: center;
+            background: radial-gradient(circle at 50% 10%, #1e293b, var(--dark) 90%);
+            color: #cbd5e1; font-family: 'Assistant', sans-serif;
+            margin: 0; padding: 15px; text-align: center;
         }
-        h1 { margin: 5px; color: #eab308; text-transform: uppercase; letter-spacing: 3px; font-size: 24px; }
+
+        /* פס הרדאר של המסגרות העילאית צורכי משלח שרחם שחושב רזות הפנול. סנסיטיב !  */
+        body::before {
+            content:""; position:fixed; top:0; left:0; width:100%; height:100%;
+            background: linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px; pointer-events: none; z-index: -1;
+        }
+
+        h1 { margin: 5px; color: var(--neon); text-transform: uppercase; letter-spacing: 5px; font-family:'Share Tech Mono', sans-serif; font-size: 28px; text-shadow: 0 0 15px rgba(56, 189, 248, 0.5);}
+        .back-nav { display: inline-flex; justify-content: center; align-items:center; color: #aaa; text-decoration:none; margin-bottom: 20px; font-weight: bold; background: #1e293b; padding: 5px 15px; border-radius: 20px; font-size:12px;}
+        .back-nav:hover { color:#fff; background:var(--warn); }
         
-        .container { max-width: 500px; margin: 0 auto; padding-bottom: 50px; }
+        .container { max-width: 600px; margin: 0 auto; padding-bottom: 60px; position:relative;}
         
-        /* Stats Dashboard */
         .dashboard {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-            background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 20px;
-            border-bottom: 4px solid #3b82f6; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            display: flex; gap: 10px; background: var(--panel); padding: 15px; border-radius: 12px; margin-bottom: 15px;
+            border-bottom: 3px solid var(--succ); border-top: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); justify-content:space-around;
         }
-        .stat-val { display: block; font-size: 22px; color: white; font-weight: bold; }
-        .stat-label { font-size: 12px; text-transform: uppercase; color: #64748b; }
+        .stat-block { flex:1;}
+        .stat-val { display: block; font-size: 22px; color: #f8fafc; font-weight: 800; font-family: 'Share Tech Mono', monospace;}
+        .stat-label { font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: bold;}
+        
+        .army-power { 
+           background: rgba(15, 23, 42, 0.95); padding:10px; border: 1px dashed var(--succ); 
+           font-size: 14px; margin-bottom:20px; color:#fff; display:flex; justify-content:space-between;
+           border-radius:6px; align-items:center;
+        }
 
-        /* Unit Recruitment */
-        .units-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .unit-card {
-            background: #1e293b; padding: 10px; border-radius: 10px; text-align: right;
-            border: 1px solid #334155; position: relative; transition: 0.2s;
+        .battle-log { 
+            background: #020617; color: #38bdf8; font-family: 'Share Tech Mono', monospace; padding: 15px; 
+            border-radius: 8px; text-align: right; margin-bottom: 20px; font-size: 12px; line-height: 1.6; border: 1px solid #1e293b;
+            min-height: 60px; box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.1); 
         }
-        .unit-card:hover { border-color: #eab308; transform: translateY(-2px); }
-        .unit-icon { float: left; font-size: 30px; }
-        .unit-name { color: #f8fafc; font-weight: bold; display: block; }
-        .unit-cost { color: #eab308; font-size: 13px; }
-        .unit-owned { font-size: 12px; color: #94a3b8; margin-top: 5px; }
-        
-        .btn-buy {
-            width: 100%; margin-top: 8px; padding: 8px; border: none; background: #2563eb; 
-            color: white; border-radius: 5px; cursor: pointer; font-weight: bold;
-        }
-        .btn-buy:hover { background: #1d4ed8; }
-        
-        /* Battle Section */
-        .battle-section { background: #331515; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #7f1d1d; }
+        .intel-badge { background: #331515; border-left: 4px solid var(--warn); padding: 12px; margin-bottom:20px; border-radius: 4px; color:#fff; text-align:right;}
+
         .btn-fight {
-            width: 100%; padding: 15px; background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white; border: none; font-size: 20px; font-weight: bold; border-radius: 8px;
-            cursor: pointer; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); animation: pulse 2s infinite;
+            width: 100%; padding: 15px; background: linear-gradient(135deg, #e11d48, #9f1239);
+            color: white; border: 1px solid #f43f5e; font-size: 18px; font-weight: bold; border-radius: 8px;
+            cursor: pointer; animation: pulseGlow 2.5s infinite; letter-spacing: 1px;
         }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6); } 70% { box-shadow: 0 0 0 12px rgba(225, 29, 72, 0); } 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); } }
 
-        /* Tech */
-        .tech-section { background: #172033; padding: 15px; border-radius: 12px; }
-        .tech-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; }
-        .btn-upgrade { background: #059669; padding: 5px 15px; color: white; border:none; border-radius: 4px; cursor: pointer; }
+        /* קורסי הבניות במזנק הקיר והבירוקרטיים ספיגנים עמוצים חומש סוליאדי לממשח!! */
+        .units-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .unit-card { background: var(--panel); padding: 12px; border-radius: 10px; text-align: right; border: 1px solid #334155; position: relative; transition: 0.2s; overflow:hidden;}
+        .unit-card::before {content:''; position:absolute; top:0;left:0; width:4px; height:100%; background: #475569;}
+        .unit-card:hover { transform: translateY(-3px); border-color:var(--succ); }
+        .unit-icon { float: left; font-size: 32px; filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));}
+        .unit-name { color: #f8fafc; font-weight: bold; display: block; font-size: 15px; margin-bottom:2px;}
+        .u-dt { font-size:11px; color:#64748b;}
+        .unit-cost { color: #fde047; font-size: 12px; font-weight:800;}
+        .unit-owned { font-size: 13px; color: var(--succ); margin-top: 10px; font-weight:800; border-top:1px dashed #334155; padding-top:5px; text-align:left;}
+        .btn-buy { width: 100%; margin-top: 8px; padding: 10px; border: none; background: #2563eb; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; font-family:'Assistant', sans-serif;}
+        .btn-buy:hover { background: #1d4ed8; }
 
-        /* Log */
-        .log-box { 
-            background: #000; color: #10b981; font-family: monospace; padding: 15px; 
-            border-radius: 8px; text-align: right; min-height: 100px; max-height: 200px; 
-            overflow-y: auto; margin-top: 20px; font-size: 13px; line-height: 1.5; border: 1px solid #1e293b;
-        }
-        .log-lose { color: #ef4444; }
-        .log-title { color: white; border-bottom: 1px dashed #333; margin-bottom: 5px; }
-
-        /* Back button */
-        .back-link { margin-top:20px; display:inline-block; color:#aaa; font-size:12px; text-decoration:none; }
-        .back-link:hover { text-decoration: underline; color: #fff; }
+        .tech-box { background: rgba(15, 23, 42, 0.5); padding: 15px; border-radius: 12px; border:1px solid #1e293b; text-align:right;}
+        .tech-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dotted #334155; padding:10px 0; }
+        .btn-upgrade { background: #059669; padding: 8px 15px; color: white; font-weight:bold; border:none; border-radius: 6px; cursor: pointer; display:flex; align-items:center; gap:5px;}
 
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>⚔️ IRON LEGION ⚔️</h1>
+    <a href="/" class="back-nav">◀ חזרה לדירוג המרכזי במנזר משחקים.. (ARCADE HUB) </a>
+    <h1>[ IRON - LEGION ]</h1>
     
     <div class="dashboard">
-        <div><span class="stat-label">זהב</span><span class="stat-val" style="color:#eab308">{{ game.gold }}</span></div>
-        <div><span class="stat-label">גל נוכחי</span><span class="stat-val">{{ game.wave }}</span></div>
-        <div><span class="stat-label">גודל צבא</span><span class="stat-val">{{ total_units }}</span></div>
+        <div class="stat-block"><span class="stat-label">סכומי זכיינות טעימות</span><span class="stat-val" style="color:#fde047">💳 {{ game.gold }}</span></div>
+        <div class="stat-block"><span class="stat-label">גל מערכי</span><span class="stat-val" style="color:#cbd5e1">🚩 {{ game.wave }}</span></div>
+        <div class="stat-block"><span class="stat-label">נחתים</span><span class="stat-val" style="color:var(--succ)">🪖 {{ total_units }}</span></div>
     </div>
 
-    <!-- Battle Log -->
-    <div class="log-box">
+    <!-- מאשוש קהול מסרב גריעות הפצת הארגות של מודיעינצ מחקר!!! -->
+    <div class="army-power">
+         <span>הפקת העובדה הצורב כונס טכנולוגית.. </span>
+         <b>🔥 עמדה מתמרכזית צורך שלך: { ⚔️{{my_dmg}}  |  🛡️{{my_hp}} }</b>
+    </div>
+
+    <div class="battle-log">
         {% for line in game.last_battle_log %}
-            <div class="{{ 'log-lose' if '❌' in line or '💀' in line else '' }}">{{ line }}</div>
+            <div style="margin-bottom:6px; color: {{ 'var(--warn)' if '❌' in line or '💀' in line or '!!!' in line else 'inherit' }};">{{ line }}</div>
         {% endfor %}
     </div>
 
-    <div class="battle-section">
-        <a href="/game5/fight"><button class="btn-fight">🔥 שלח צבא לקרב 🔥</button></a>
-        <div style="margin-top:10px; font-size:12px; color:#ef4444;">אזהרה: יחידות ימותו בקרב!</div>
+    <!-- מערך התפיח - בתוך סודק העבדים יוכיר לנייד עשיה וקרקאות שוויות חמות!!  -->
+    <div class="intel-badge">
+       <b>⚠️ איכונים כבשי מטריה חמה ממריץ של הגנרי תרשימי אוטומיסטים רחק ממכם...</b><br>
+       הגל שמצפה פקידת בלובית - כניעתו סכומי אמת מודעים:<br>נשמים של פגש וגלים מעורך כניעות צער אויבי... : ⚔️ {{ intel.dmg }} נזק משילי אנוש. 🛡️ מוגנים משכל סריון {{ intel.hp }}. מציא אותנו. גנרל היזהרו והאנקם חזיתי קורם למנועות הרכב !!. 
     </div>
 
-    <h3>💰 גיוס יחידות</h3>
+    <!-- לזכור לא לצאת במגע אם הקרקעות לא מבוישות ענבות - חזק יטפטוף ירב משחי צפוני הפצות קרני טרק אכס...  -->
+    <div style="margin-bottom: 25px;">
+        <a href="/game5/fight"><button class="btn-fight">🧨 ארוז את המחבלה -- חיתל לחקר זרה ולך אל המלחמות!!! (קופץ יצא לחוצצ)</button></a>
+    </div>
+
+    <h3 style="text-align:right; border-bottom:1px solid #334155; padding-bottom:5px; margin-top:40px;">בסיס המפקדה [Garrison Center]</h3>
     <div class="units-grid">
         {% for key, unit in units.items() %}
         <div class="unit-card">
             <span class="unit-icon">{{ unit.icon }}</span>
             <span class="unit-name">{{ unit.name }}</span>
-            <div class="unit-cost">{{ unit.cost }}$ </div>
-            <div class="unit-owned">יש ברשותך: <b>{{ game.army[key] }}</b></div>
-            <a href="/game5/buy/{{ key }}"><button class="btn-buy">גייס (+1)</button></a>
+            <div class="u-dt">מתאם אלוחי אנושת חום: ⚔️{{unit.dmg}} 🛡️{{unit.hp}}</div>
+            <div class="unit-cost">💸 משימנה למקור: {{ unit.cost }} מטמני סופר מרדדי בר!</div>
+            <a href="/game5/buy/{{ key }}" style="text-decoration:none;"><button class="btn-buy">חזקת הקריה (+1 גוף עולה אל חילופי הסחג)</button></a>
+            <div class="unit-owned">מאובזר בזעקה צעופה שלך > : <span>{{ game.army[key] }}</span> כפיקחי עתד</div>
         </div>
         {% endfor %}
     </div>
 
-    <h3>🔧 שדרוגים (Tech)</h3>
-    <div class="tech-section">
+    <h3 style="text-align:right; border-bottom:1px solid #334155; padding-bottom:5px;">מכונות קריפוט טכניות מעלות עמול...</h3>
+    <div class="tech-box">
         {% for key, upg in upgrades.items() %}
         <div class="tech-row">
-            <div style="text-align:right">
-                <div style="font-weight:bold; color: white">{{ upg.name }}</div>
-                <div style="font-size:12px">רמה נוכחית: {{ game.tech[key] }}</div>
+            <div>
+                <div style="font-weight:800; color: #fff; display:flex; gap:8px;"><span>{{upg.icon}}</span> {{ upg.name }}</div>
+                <div style="font-size:13px; color:#94a3b8; margin-top:2px;">מועצב שחלות כנושם רגיל > Lvl. <b>{{ game.tech[key] }}</b></div>
             </div>
-            <a href="/game5/upgrade/{{ key }}">
-                <button class="btn-upgrade">{{ game.upgrade_costs[key] }}$ ▲</button>
+            <a href="/game5/upgrade/{{ key }}" style="text-decoration:none;">
+                <button class="btn-upgrade">{{ game.upgrade_costs[key] }}$ תכנון טיוחי טכס ++ </button>
             </a>
         </div>
         {% endfor %}
     </div>
     
-    <br>
-    <a href="/game5/reset" style="color: #64748b; font-size:12px; margin-left: 10px;">אפס משחק</a>
-    <a href="/" class="back-link">יציאה ללובי</a>
+    <div style="margin-top:30px; border-top:1px dashed #333; padding-top:20px;">
+        <a href="/game5/reset" style="color: #64748b; font-size:12px; font-weight:bold;">סיוג מסחיר מתאם פחדן > אתחל רשומה מערכויות משל קריס... איפוס כל המוסכי נגטי לחללי השער לחובות!!! > </a>
+    </div>
 
 </div>
 
@@ -257,39 +275,54 @@ HTML = """
 </html>
 """
 
+# ===============================
+# מנהלים הליכים מופנים לתת מערכי כובס הקרוב! (Arcade game5 Prefix Supported! )
+# ===============================
+
 @app.route('/')
 def home():
-    # חישוב סה"כ חיילים לתצוגה
-    _, _, total = state.get_army_stats()
-    return render_template_string(HTML, game=state, units=UNIT_TYPES, upgrades=UPGRADES, total_units=total)
+    state = load_game()
+    dmg, hp, count = state.get_army_stats()
+    return render_template_string(HTML, game=state, units=UNIT_TYPES, upgrades=UPGRADES, total_units=count, intel=state.get_intel(), my_dmg=dmg, my_hp=hp)
 
 @app.route('/buy/<unit_key>')
 def buy(unit_key):
-    cost = UNIT_TYPES[unit_key]['cost']
-    if state.gold >= cost:
-        state.gold -= cost
-        state.army[unit_key] += 1
+    state = load_game()
+    if unit_key in UNIT_TYPES:
+        cost = UNIT_TYPES[unit_key]['cost']
+        if state.gold >= cost:
+            state.gold -= cost
+            state.army[unit_key] += 1
+            save_game(state)
     return redirect('/game5/')
 
 @app.route('/upgrade/<upg_key>')
 def upgrade(upg_key):
-    cost = state.upgrade_costs[upg_key]
-    if state.gold >= cost:
-        state.gold -= cost
-        state.tech[upg_key] = round(state.tech[upg_key] * UPGRADES[upg_key]['factor'], 2)
-        # המחיר עולה פי 2 בכל שדרוג
-        state.upgrade_costs[upg_key] = int(cost * 1.8)
+    state = load_game()
+    if upg_key in state.tech:
+        cost = state.upgrade_costs[upg_key]
+        if state.gold >= cost:
+            state.gold -= cost
+            # נתעדכן כל רמות החומשים החוזקו הלחלי של שימש הפליטים כפל!  :  : )
+            state.tech[upg_key] = round(state.tech[upg_key] * UPGRADES[upg_key]['factor'], 2)
+            state.upgrade_costs[upg_key] = int(cost * 1.8)
+            save_game(state)
     return redirect('/game5/')
 
 @app.route('/fight')
 def battle():
+    state = load_game()
     state.fight()
+    save_game(state)
     return redirect('/game5/')
 
 @app.route('/reset')
 def reset():
+    state = load_game()
     state.reset()
+    save_game(state)
     return redirect('/game5/')
 
 if __name__ == '__main__':
+    # מזרזי הרכב עבוד חתך רנדרי ספרי נזרו מריחים עתירים !! ) :) !! 
     app.run(host='0.0.0.0', port=5000, debug=True)
