@@ -69,9 +69,6 @@ except ImportError: game9 = create_dummy_app("CLOVER")
 try: from app10 import app as game10
 except ImportError: game10 = create_dummy_app("CLOVER")
 
-try: from app11 import app as game11
-except ImportError: game11 = create_dummy_app("CLOVER")
-
 try: from php import app as php_app
 except ImportError: php_app = create_dummy_app("PHP App")
 
@@ -185,7 +182,6 @@ MENU_HTML = """
         <a href="/game8/" class="card"><span class="emoji-icon">🦠</span><h2>הטפיל</h2><div class="tag">החלפת גופות</div></a>
         <a href="/game9/" class="card"><span class="emoji-icon">🍀</span><h2>CLOVER</h2><div class="tag">Action Platformer</div></a>
         <a href="/game10/" class="card"><span class="emoji-icon">⚡</span><h2>NEON RIDER</h2><div class="tag">מרוץ התחמקות רטרו</div></a>
-        <a href="/game11/" class="card"><span class="emoji-icon">🍏</span><h2>רץ המבוכים</h2><div class="tag">הישרדות ממבוך רוחות</div></a>
     </div>
 
     <footer>&copy; Aviel Aluf x0583289789@gmail.com</footer>
@@ -205,7 +201,6 @@ app = DispatcherMiddleware(main_app, {
     '/game8': game8,
     '/game9': game9,
     '/game10': game10,
-    '/game11': game11,
     '/php': php_app,
     '/html': html_app,
     '/app1': html_app,
@@ -216,6 +211,7 @@ app = DispatcherMiddleware(main_app, {
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
