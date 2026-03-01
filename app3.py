@@ -17,7 +17,7 @@ class GameState:
         self.energy = 100      # דלק/חשמל
         self.hull = 100        # חוזק הספינה (0 = פיצוץ)
         self.credits = 500     # כסף למסחר
-        self.log = "הספינה ג'נסיס יצאה לדרך. היעד: מאדים."
+        self.log = "החללית ג'נסיס יצאה לדרך. היעד: מאדים."
         self.game_over = False
         self.victory = False
         self.current_event = None
