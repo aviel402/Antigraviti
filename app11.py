@@ -3,8 +3,8 @@ import uuid
 from flask import Flask, render_template_string, request, jsonify, session
 
 app = Flask(__name__)
-app.secret_key = "manager_pro_app11_secret"
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 14 # שומר נתוני שחקן
+app.secret_key = "manager_pro_app11_secret_real"
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 14 # שומר נתוני שחקן לענן
 
 # ===============================
 # DATA & TEAMS PREFERENCES
@@ -12,7 +12,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 14 # שומר נתוני שח
 FIRST_NAMES =["ערן", "מנור", "אוסקר", "מונס", "דיא", "דניאל", "עומר", "שרן", "בירם", "דולב", "יוגב", "ליאור", "דולב", "מוחמד", "אייל", "רוי", "דוד", "יהב", "שי", "רועי"]
 LAST_NAMES =["זהבי", "סולומון", "גלוך", "דבור", "סבע", "פרץ", "אצילי", "ייני", "כיאל", "חזיזה", "אוחיון", "כהן", "אבו פאני", "רביבו", "חמד", "שרי", "עזרא", "גלזר"]
 
-# השדרוג! פלטת צבעי הקבוצות למראה המנג'ר האמיתי:
+# צבעים יפהפיים של הליגה שלנו:
 TEAMS_DB =[
     {"name": "מכבי תל אביב", "primary": "#ffe400", "secondary": "#051660"},
     {"name": "מכבי חיפה", "primary": "#036531", "secondary": "#ffffff"},
@@ -42,7 +42,6 @@ class Player:
         if self.pos == "GK": self.att = random.randint(10, 30); self.deny += 20
         elif self.pos == "FWD": self.att += 20; self.deny = random.randint(20, 50)
         
-        # חישוב ערך ריאליסטי
         self.value = int(((self.att * 0.5) + (self.deny * 0.5)) * 15000) + random.randint(-50000, 200000)
         
     def to_dict(self): return self.__dict__
@@ -77,7 +76,7 @@ class Team:
 class League:
     def __init__(self):
         self.teams =[Team(info) for info in TEAMS_DB]
-        self.my_team_id = None # ← המערכת לא בוחרת עבורנו יותר! אנחנו חייבים מסך תצורה בהתחלה!
+        self.my_team_id = None
         self.week = 1
         self.market =[Player(is_gk=(i==0)) for i in range(8)] 
 
@@ -87,7 +86,7 @@ class League:
     def set_player_team(self, tid):
         self.my_team_id = tid
         for t in self.teams:
-            t.is_ai = (t.id != tid) # רק שלי מנוהל ידנית אמת
+            t.is_ai = (t.id != tid)
 
     def play_week(self):
         random.shuffle(self.teams)
@@ -95,7 +94,7 @@ class League:
         for i in range(0, len(self.teams), 2):
             matches.append(self.simulate_match(self.teams[i], self.teams[i+1]))
         self.week += 1
-        self.market = self.market[2:] + [Player(), Player(is_gk=random.random()>0.8)]
+        self.market = self.market[2:] +[Player(), Player(is_gk=random.random()>0.8)]
         return matches
 
     def simulate_match(self, t1, t2):
@@ -124,7 +123,7 @@ class League:
                 "is_mine": (t1.id == self.my_team_id or t2.id == self.my_team_id)}
 
 # ===============================
-# SESSIONS ענן של Vercel ב- Arcade 
+# SESSIONS
 # ===============================
 LEAGUES_DB = {}
 
@@ -138,7 +137,7 @@ def get_game():
     return LEAGUES_DB[uid]
 
 # ===============================
-# ENDPOINTS REST API מודרני מרושת..
+# API ENDPOINTS
 # ===============================
 @app.route('/')
 def home():
@@ -147,7 +146,6 @@ def home():
 @app.route('/api/data', methods=['GET'])
 def get_data():
     g = get_game()
-    # בדיקה חדשה >> מחזיר אירוע אזהרה אם משתמש חדש והוא זקוק לשלם לזרוק לקבוצה חדשה. 
     if not g.my_team_id:
         teams_lite =[{"id": t.id, "name": t.name, "c1": t.primary, "c2": t.secondary} for t in g.teams]
         return jsonify({"needs_setup": True, "teams_available": teams_lite})
@@ -160,7 +158,7 @@ def get_data():
 
     return jsonify({
         "needs_setup": False,
-        "my_team": { "name": my_team.name, "budget": my_team.budget, "formation": my_team.formation, "squad": [p.to_dict() for p in squad_sorted], "col": my_team.primary },
+        "my_team": { "name": my_team.name, "budget": my_team.budget, "formation": my_team.formation, "squad":[p.to_dict() for p in squad_sorted], "col": my_team.primary },
         "table":[ {"pos": i+1, "name": t.name, "pts": t.points, "p": t.games_played, "w":t.wins, "d":t.draws, "l":t.losses, "gd": t.goals_for - t.goals_against} for i, t in enumerate(table)],
         "market":[p.to_dict() for p in market_sorted],
         "week": g.week
@@ -191,26 +189,26 @@ def transfer():
     if action == 'buy':
         target = next((p for p in g.market if p.id == pid), None)
         if target and my_team.budget >= target.value:
-            if len(my_team.squad) >= 20: return jsonify({"err": "הסגל הגיע לקצה המקסימום האפשרי במנוע המועדון."})
+            if len(my_team.squad) >= 20: return jsonify({"err": "הסגל הגיע לקצה המקסימום האפשרי (20 שחקנים)."})
             my_team.budget -= target.value
             my_team.squad.append(target)
             g.market.remove(target)
-            return jsonify({"msg": f"רשמי! מצאנו בלוג החדש - {target.name} מרושע לשורות הכתר של ספגנט שלנו!"})
-        return jsonify({"err": "חרגנו ממרב החותמות – העברת המאזנים סירבה - הכלים לא מספיקים."})
+            return jsonify({"msg": f"ההעברה הושלמה! {target.name} הצטרף לסגל הקבוצה."})
+        return jsonify({"err": "אין מספיק כסף בקופת המועדון עבור העברה זו."})
 
     if action == 'sell':
         target = next((p for p in my_team.squad if p.id == pid), None)
         if target: 
              if len([p for p in my_team.squad if p.pos == "GK"]) < 2 and target.pos == "GK":
-                   return jsonify({"err":"אי-אפשר לשחול דברי כבוד עם שוער הבודד שנרגע בתיבת החלק, תקנו רזרבה קודם.. "})
+                   return jsonify({"err":"אי-אפשר למכור את השוער היחיד שיש בסגל!"})
              if len(my_team.squad) > 13: 
                 my_team.budget += int(target.value * 0.75)
                 my_team.squad.remove(target)
-                return jsonify({"msg": "סגירות מקיפות: הפקת המפצל השתריילה כפי שצוויך ל-מוכח.. "})
-             else: return jsonify({"err": "דרישות חסור משורות: המצב נורמל בחליש על קוי החזרה (לא מעביר למעלה שכר פנים!)"})
-        return jsonify({"err": "רמה זוכה עגלומי תקשר לא מספיק - פגע וירמם מגע מלונה..."})
+                return jsonify({"msg": "השחקן נמכר ו-75% מהכסף נכנס לקופת המועדון."})
+             else: return jsonify({"err": "אתה חייב להשאיר מינימום 13 שחקנים בסגל, אי אפשר למכור יותר."})
+        return jsonify({"err": "קרתה שגיאה במערכת."})
 
-    return jsonify({"err": "שיגעור משחק עלול פלג משמנזר..."})
+    return jsonify({"err": "שגיאה בביצוע ההעברה."})
 
 @app.route('/api/restart')
 def force_restart():
@@ -218,7 +216,7 @@ def force_restart():
     return jsonify({"ok":True})
 
 # ===============================
-# UI TEMPLATE  ==>  MIND BLOWING DARK DESIGN!! ✨✨✨ 
+# UI TEMPLATE  ==>  עיצוב מרשים, טקסט בעברית צחה!!!
 # ===============================
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -227,12 +225,10 @@ HTML_TEMPLATE = """
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Manager PRO XI</title>
-<!-- תאימות לפונט המודרניסטי שיסחב את כיתובי הדסמניה הספורטיבי! -->
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
 <style>
-/* --- משתנים צורפים לכהים מקס למגרשים מתמצחים עילית...  */
 :root { 
-    --p-bg: #121620;  /* המקצפים הסגסוכת כרם ספוף חשכת קלאסי עתידים */
+    --p-bg: #121620; 
     --p-panel: rgba(28, 36, 52, 0.95);
     --gold: #d4af37; 
     --grass-alt: #059669; 
@@ -243,7 +239,6 @@ HTML_TEMPLATE = """
 body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); color: var(--txt); font-family: 'Assistant', sans-serif; min-height:100vh; padding-bottom: 75px;}
 * { box-sizing: border-box;}
 
-/* בוררת הצל מנקודת הסופש... כפוי לא נספך ! הוגמש לדימי לוחצים סוף! */
 .arcade-btn { position: absolute; left: 15px; top:12px; font-weight: bold; font-size: 11px; padding: 6px 12px; background: rgba(0,0,0,0.6); color: white; text-decoration: none; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); transition: 0.3s;}
 .arcade-btn:hover { background: #fff; color: #000; }
 
@@ -254,10 +249,10 @@ body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); c
    box-shadow: 0 4px 15px rgba(0,0,0,0.5); padding: 25px 20px 15px; text-align:right;
    display: flex; justify-content: space-between; align-items:flex-end; backdrop-filter:blur(8px);
 }
-.hdr-title { font-family: 'Oswald', sans-serif; font-size: 24px; text-transform: uppercase; color: #fff; margin:0;}
+.hdr-title { font-family: 'Oswald', sans-serif; font-size: 24px; color: #fff; margin:0; display:flex; align-items:center; gap:8px;}
 .budget-pod { font-family: monospace; font-size: 22px; font-weight:bold; color: var(--gold); background: #0b0e14; padding: 6px 14px; border-radius: 4px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.8); }
 
-/* --- SECTION PICKING TEAMS: המסך הרזיר כמותן לארחות מקרא החצנות הראשויות אלאהל!!  */
+/* --- PICK SCREEN --- */
 #setup-screen { position: absolute; top:0;left:0; width:100%; min-height:100%; background: radial-gradient(circle at 50% 10%, #1e293b, #000); padding-top: 50px; text-align:center; z-index:500;}
 .s-head { font-family: 'Oswald', sans-serif; color:var(--gold); font-size:42px; margin-bottom:10px; text-shadow: 0 5px 15px rgba(0,0,0,0.8); letter-spacing:1px;}
 .s-sub { color: #cbd5e1; font-size: 16px; margin-bottom: 40px;}
@@ -268,21 +263,20 @@ body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); c
     box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
 }
 .team-option:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.8); border-color:#fff;}
-.team-option::before { content:""; position:absolute; bottom:0; left:0; right:0; height:8px;} /* color inject inline  */
+.team-option::before { content:""; position:absolute; bottom:0; left:0; right:0; height:8px;} 
 .tm-name { font-weight:800; font-size:20px; z-index: 2; position:relative; text-shadow:1px 1px 2px rgba(0,0,0,0.8); color:white;}
-.t-crest-fake { display:inline-flex; width:60px; height:60px; background:rgba(0,0,0,0.5); border-radius:50%; align-items:center; justify-content:center; margin-bottom:15px; border:2px solid; color:#fff;}
+.t-crest-fake { display:inline-flex; width:60px; height:60px; background:rgba(0,0,0,0.5); border-radius:50%; align-items:center; justify-content:center; margin-bottom:15px; border:2px solid; color:#fff; font-family:'Oswald', sans-serif;}
 
-
-/* TABS NAV בצל הכנוז האבטי והמחצצות!   */
+/* TABS NAV */
 .tabs-tray { display: flex; max-width:900px; margin: 20px auto 0; gap:8px; padding:0 15px;}
-.tab-b { flex:1; background: var(--p-panel); color: #94a3b8; border:1px solid rgba(255,255,255,0.1); border-bottom:0; font-family:'Assistant', sans-serif; padding:15px; font-weight:800; font-size:16px; border-radius: 8px 8px 0 0; cursor: pointer; transition:0.3s; text-transform:uppercase; box-shadow:inset 0 -10px 15px rgba(0,0,0,0.2);}
+.tab-b { flex:1; background: var(--p-panel); color: #94a3b8; border:1px solid rgba(255,255,255,0.1); border-bottom:0; font-family:'Assistant', sans-serif; padding:15px; font-weight:800; font-size:16px; border-radius: 8px 8px 0 0; cursor: pointer; transition:0.3s; box-shadow:inset 0 -10px 15px rgba(0,0,0,0.2);}
 .tab-b.active { color:#fff; background: var(--grass-alt); box-shadow:none; border-color:var(--grass-alt);}
 
 .content-box { display: none; background: rgba(16,23,37,0.7); max-width:900px; margin: 0 auto; min-height:400px; animation: swipe 0.3s; padding:15px; }
 .content-box.active { display:block;}
 @keyframes swipe { 0%{opacity:0; transform:translateX(10px);} 100%{opacity:1;} }
 
-/* --- FUT STYLE PLAYER CARDS!! שבירו משחת העלים הארגומני!! ! */
+/* --- FUT STYLE PLAYER CARDS --- */
 .squad-g { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:15px; }
 .pl-c { 
    background: linear-gradient(180deg, rgba(31,41,55,1) 0%, rgba(17,24,39,1) 100%); 
@@ -295,110 +289,110 @@ body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); c
 
 .stats-band { display:flex; border-top:1px solid #1f2937; border-bottom:1px solid #1f2937; background:#0f172a;}
 .stat-box { flex:1; padding:8px 0;}
-.st-L { font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;}
-.st-V { font-size:22px; font-family:'Oswald',sans-serif; font-weight:bold; line-height:1;}
+.st-L { font-size:11px; color:#94a3b8; font-weight:bold; letter-spacing:0.5px; margin-bottom:2px;}
+.st-V { font-size:24px; font-family:'Oswald',sans-serif; font-weight:bold; line-height:1;}
 .c-at { color:#f87171;} .c-df { color:#60a5fa;}
 
 .crd-foot { padding:10px 15px; display:flex; justify-content:space-between; align-items:center; background:#111;}
 .cr-pr { font-size:14px; font-weight:800; font-family:monospace; color:#10b981; letter-spacing:0.5px;}
 
-/* הלחמנת הכמות בחצי ערובת יוסד כניס... - חותכת במטופית דרוע שבוז!!..  */
 button.fnc { padding:6px 14px; font-size:13px; font-weight:700; color:#fff; border:none; border-radius:4px; cursor:pointer;}
 .fnc-buy { background:linear-gradient(135deg,#059669,#10b981); } .fnc-sell {background:linear-gradient(135deg,#be123c,#e11d48);} 
 
-/* לוח ורוח תקינאי המצבים האנשני -- הלחמה קלירית על טיימר של קסר!*/
 select.tct-sc { background:var(--p-panel); color:white; padding:10px 15px; font-size:15px; border-radius:6px; border:1px solid #334155; margin-bottom:15px; font-weight:bold; width:100%; outline:none;}
 
-/* Table ! -- מיגונו השחרים המנוגני קו בבאר... הולך עם סכמו אחו... */
+/* --- TABLE --- */
 .tbl { width:100%; background:var(--p-panel); border-collapse:collapse; border-radius:8px; overflow:hidden; margin-top:10px; border:1px solid #334155;}
 .tbl th, .tbl td { text-align:center; padding:12px; font-size:15px; border-bottom: 1px solid rgba(255,255,255,0.05);}
-.tbl th { background: #0b0f19; font-family:'Oswald',sans-serif; color:var(--gold); text-transform:uppercase; letter-spacing:1px;}
+.tbl th { background: #0b0f19; font-family:'Assistant',sans-serif; font-size: 14px; color:var(--gold); font-weight: bold;}
 .tr-my { background: rgba(5,150,105, 0.2); font-weight:900;} .tr-my td:nth-child(2){color:var(--neon-t); border-bottom: 2px solid; padding-left:0;}
 .tmr { text-align:right !important; white-space:nowrap;}
 
-/* MASTER ACTION FOOT! - הדבקת מתאכי התניחות לחלח המשתחק לחציין. לצעק במתכוום לחסידים!!*/
+/* MASTER ACTION FOOT */
 .flt-wrap { position:fixed; bottom:0; left:0; width:100%; text-align:center; z-index:400; background:linear-gradient(0deg, #000 30%, transparent 100%); padding:25px 0;}
-.pl-wk { padding:18px 45px; background: var(--grass-alt); color:#fff; font-size:18px; font-family:'Assistant'; border-radius:30px; font-weight:900; letter-spacing:0.5px; box-shadow:0 10px 30px rgba(0,0,0,0.6); border:none; outline:none; cursor:pointer; text-shadow:0 -1px 3px rgba(0,0,0,0.8); border-top:2px solid rgba(255,255,255,0.4); }
+.pl-wk { padding:15px 45px; background: var(--grass-alt); color:#fff; font-size:20px; font-family:'Assistant'; border-radius:30px; font-weight:900; letter-spacing:0.5px; box-shadow:0 10px 30px rgba(0,0,0,0.6); border:none; outline:none; cursor:pointer; text-shadow:0 -1px 3px rgba(0,0,0,0.8); border-top:2px solid rgba(255,255,255,0.4); }
 .pl-wk:hover { background: #06b6d4; }
-.reboot { font-size: 11px; color:#555; position:absolute; bottom:5px; right:10px; cursor:pointer;}
+.reboot { font-size: 12px; font-weight: bold; color:#777; position:absolute; bottom:5px; right:15px; cursor:pointer; transition: 0.2s;}
+.reboot:hover { color: #f43f5e; text-decoration:underline; }
 
-/* התפחות הפחמים השמשתלפים כדור משלי בורע בנחש אדיב !!!... !!.. .. :_)...! !*/
+/* MODAL RESULTS */
 #over { position:fixed; inset:0; background:rgba(2,6,23,0.96); z-index:900; overflow-y:auto; padding-top:40px; display:none; flex-direction:column; align-items:center;}
 .scr-p { display:flex; flex-direction:column; gap:15px; width:90%; max-width:600px;}
 .rs-k { background:rgba(255,255,255,0.05); border-left:4px solid transparent; border-radius:8px; display:flex; overflow:hidden;}
 .rk-my-w { border-color: var(--grass-alt); background: rgba(5,150,105, 0.15);} .rk-my-l{ border-color:var(--warn);}
-.rmb-n { flex:2; padding:15px; font-weight:bold; color:#cbd5e1;}
+.rmb-n { flex:2; padding:15px; font-weight:bold; font-size: 18px; color:#cbd5e1;}
 .rmb-L {text-align:right;} .rmb-R {text-align:left;}
 .rsx { background:#0f172a; flex:0.6; align-items:center; justify-content:center; display:flex; font-size:26px; font-family:'Oswald', monospace; font-weight:bold; letter-spacing:4px;}
-.rstxt { padding:10px 15px; font-size:13px; color:#64748b;}
+.rstxt { padding:10px 15px; font-size:14px; color:#64748b; line-height: 1.6;}
 .rstxt-L{text-align:right;border-left:1px dashed #334155;} .rstxt-R{text-align:left;}
 
 </style>
 </head>
 <body>
 
-<!-- PICK SCREEN: הבטון על הרקמים להחלת התאכלים מהר!!!  -->
+<!-- PICK SCREEN -->
 <div id="setup-screen" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
    <div style="margin:auto 0; padding-bottom:50px;">
         <h1 class="s-head">BORN FOR THE DUGOUT</h1>
-        <div class="s-sub">לפניי שניקח את הליגה לקראת כיבוש אש הפולשנית.<br> בחר קבוצה לחקור כמנג'ר בכיר למענה אישים!</div>
-        <div id="sel-render" class="grid-teams"> <!-- Team nodes inject JS --></div>
+        <div class="s-sub">כדי לצאת לדרך, עליך לבחור איזו קבוצה מליגת העל תרצה לנהל:</div>
+        <div id="sel-render" class="grid-teams"> <!-- מילוי ע"י JS --></div>
    </div>
-   <a href="/" style="position:absolute; top:20px; right:20px; color:#aaa; font-weight:bold; font-family:monospace; font-size:12px;">X EXIT ARCADE_M</a>
+   <a href="/" style="position:absolute; top:20px; right:20px; color:#aaa; font-weight:bold; font-size:13px; text-decoration:none;">X חזור לתפריט משחקים הראשי</a>
 </div>
 
-<!-- המשטע המשמעות הנטיה! (התווספה עוטפתו ההחלצנות כבל מכל) -->
 <div id="m-body" style="display:none;">
-
-    <a href="/" class="arcade-btn">⮜ תפריט ההובר למעבד ההכללות לממש השרש.. </a>
+    <a href="/" class="arcade-btn">⮜ תפריט ההאב</a>
 
     <div class="header-bar" id="bdrk">
-        <h2 class="hdr-title" id="dynN">-- טוען --</h2>
-        <div class="budget-pod">💸 <span id="budget" style="color:var(--txt);">0</span></div>
+        <h2 class="hdr-title" id="dynN">-- טוען נתונים --</h2>
+        <div class="budget-pod">€<span id="budget" style="color:var(--txt);">0</span></div>
     </div>
 
     <div class="tabs-tray">
-        <button class="tab-b active" onclick="goTab('vSqd', this)">כוח אדם בסגל 🏃‍♂️</button>
-        <button class="tab-b" onclick="goTab('vMkt', this)">ניהול ההעברות בשוק המטבע הנגן!! 🔎</button>
-        <button class="tab-b" onclick="goTab('vTbl', this)">מרכז הצפי ומיפוי של טבלת הדלוג 📋</button>
+        <button class="tab-b active" onclick="goTab('vSqd', this)">סגל הקבוצה ⚽</button>
+        <button class="tab-b" onclick="goTab('vMkt', this)">שוק ההעברות 🔎</button>
+        <button class="tab-b" onclick="goTab('vTbl', this)">טבלת הליגה 📋</button>
     </div>
 
     <div class="content-box active" id="vSqd">
          <select class="tct-sc" onchange="fireReq('api/formation',{formation:this.value}, false)">
-            <option value="4-4-2">[ טקטיקה באופר - מאוזן מגע אליפות (4-4-2) ]</option>
-            <option value="4-3-3">[ הסתערות רדיפא - העפשת אגמים (4-3-3 בונוסי יורה כבד!)</option>
-            <option value="5-4-1">[ רטיפה הגנותית משובק בערח של בונקר גהת חיסונות (5-4-1 הגנת דד..) </option>
+            <option value="4-4-2">טקטיקה: 4-4-2 (קלאסי - משחק מאוזן)</option>
+            <option value="4-3-3">טקטיקה: 4-3-3 (התקפי - דגש על פליימייקינג וחלוצים)</option>
+            <option value="5-4-1">טקטיקה: 5-4-1 (הגנתי / בונקר - שמירה על רשת נקייה)</option>
         </select>
         <div class="squad-g" id="r_sq"></div>
     </div>
     
     <div class="content-box" id="vMkt">
-        <div style="margin-bottom:20px; background: rgba(0,0,0,0.3); padding:10px 15px; border-left:4px solid #facc15; border-radius:5px; color:#94a3b8; font-size:14px;">המחזה השחקני בשוק חי ואמפי - שימו אלי כי המצבים לא הופלו שפירות קריפטו.. לא כל נוצץ מושל בביקתא. המחירים אינדיקטבים בהמלך נחותן תפקודי! </div>
+        <div style="margin-bottom:20px; background: rgba(0,0,0,0.3); padding:10px 15px; border-left:4px solid #facc15; border-radius:5px; color:#94a3b8; font-size:14px; font-weight: bold;">
+        שוק השחקנים - הרשת פתוחה למציאת כשרונות! כל מחזור יוצגו שחקנים אחרים לקנייה.
+        </div>
         <div class="squad-g" id="r_mkt"></div>
     </div>
     
     <div class="content-box" id="vTbl">
-        <div style="font-family:'Oswald',sans-serif; text-align:left; color:#cbd5e1; font-size:18px; margin-bottom:5px;"> מחזור שוחק טייס ::  #<span id="wwW"></span></div>
+        <div style="font-weight:bold; color:#cbd5e1; font-size:18px; margin-bottom:5px;"> מחזור ליגה נוכחי:  #<span id="wwW"></span></div>
         <table class="tbl">
-             <thead><tr><th>No</th><th class="tmr">CLUB ASSOSICATION.M</th><th>P-PTS</th><th>PM</th><th>Win</th><th>Los</th><th>Goal[+ -]</th></tr></thead>
+             <thead><tr><th>מיקום</th><th class="tmr">שם מועדון</th><th>נק'</th><th>מש'</th><th>נצ'</th><th>הפ'</th><th>שערים</th></tr></thead>
              <tbody id="r_tbl"></tbody>
         </table>
     </div>
 
-    <div class="flt-wrap"><button class="pl-wk" onclick="pDay(this)"> ▶️ רד בממשו לחרושת ההגעה : שחקה סיבוב</button><span class="reboot" onclick="reZ()">(רטיות מגרסת הענן לשמד - איתחלו משריקת הקיסם נפרד?)</span></div>
+    <div class="flt-wrap">
+        <button class="pl-wk" onclick="pDay(this)"> ▶️ שחק את המחזור הקרוב</button>
+        <span class="reboot" onclick="reZ()">(אתחל שמירת מנג'ר בענן 🗑️)</span>
+    </div>
 </div>
 
 <div id="over">
     <div style="max-width:600px; width:90%; border-bottom:1px solid #334155; padding-bottom:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-       <h1 style="color:#fff; font-family:'Oswald',sans-serif; letter-spacing:1px; margin:0;">🏁 סיכומי המחזה העונתה ! </h1>
-       <button style="background:var(--txt); padding:10px 20px; font-weight:bold; cursor:pointer; border:none; border-radius:30px; " onclick="oQ()">&times; המשכי צלחה לסגירה סופי ..</button>
+       <h1 style="color:#fff; font-family:'Oswald',sans-serif; letter-spacing:1px; margin:0;">תוצאות מחזור הליגה! 🏆</h1>
+       <button style="background:var(--grass-alt); color:#fff; padding:10px 20px; font-size:16px; font-weight:bold; cursor:pointer; border:none; border-radius:30px; box-shadow:0 0 10px rgba(5,150,105,0.4);" onclick="oQ()">המשך להכנות למחזור הבא ⮞</button>
     </div>
     <div class="scr-p" id="pOverList"></div>
 </div>
 
-
 <script>
-
 function gEl(id){ return document.getElementById(id); }
 
 function goTab(vid, btn) {
@@ -419,26 +413,28 @@ async function fireReq(ep, payload={}, withLoad=true) {
 }
 
 function RPlCard(p, mode="sell") {
-    let ppClass = "";
-    if(p.pos==="GK") ppClass="pl-pos-G";
-    let mkFn = mode==="buy"? `<button class="fnc fnc-buy" onclick="fireReq('api/transfer', {action:'buy', player_id:'${p.id}'})">תרום להזמין לחוזי!!💸</button>`: 
-                            `<button class="fnc fnc-sell" onclick="fireReq('api/transfer', {action:'sell', player_id:'${p.id}'})">ימחק במכיר (-25% משסוף חובה)</button>`
+    let ppClass = p.pos === "GK" ? "pl-pos-G" : "";
+    let btnMsgCnf = "האם לאשר עסקת רכש על סך "+ (p.value).toLocaleString() +"€ ?";
+    let sellMsgCnf = "מכירת השחקן תכניס מידית "+(p.value*0.75).toLocaleString() +"€, האם להמשיך?";
+    let actBtn = mode === "buy" 
+        ? `<button class="fnc fnc-buy" onclick="if(confirm('${btnMsgCnf}')) fireReq('api/transfer', {action:'buy', player_id:'${p.id}'})">קנה שחקן (שלם כעת)</button>`
+        : `<button class="fnc fnc-sell" onclick="if(confirm('${sellMsgCnf}')) fireReq('api/transfer', {action:'sell', player_id:'${p.id}'})">מכור למועדון (75% החזר)</button>`;
+        
     return `
     <div class="pl-c">
         <div class="p-hdr"><div class="pl-pos ${ppClass}">${p.pos}</div></div>
         <div class="pl-name">${p.name}</div>
         <div class="stats-band">
-            <div class="stat-box" style="border-right:1px solid #1f2937;"><div class="st-L">עוצמות התקפות פוש</div><div class="st-V c-at">${p.att}</div></div>
-            <div class="stat-box"><div class="st-L">משפולי חופשת קרס ומחסום </div><div class="st-V c-df">${p.deny}</div></div>
+            <div class="stat-box" style="border-right:1px solid #1f2937;"><div class="st-L">התקפה</div><div class="st-V c-at">${p.att}</div></div>
+            <div class="stat-box"><div class="st-L">הגנה</div><div class="st-V c-df">${p.deny}</div></div>
         </div>
-        <div class="crd-foot"><div class="cr-pr">€ ${(p.value/1000000).toFixed(1)}M</div>${mkFn}</div>
+        <div class="crd-foot"><div class="cr-pr">€ ${(p.value/1000000).toFixed(1)}M</div>${actBtn}</div>
     </div>`
 }
 
 function BldUi(data) {
-   // מעיל תרצוי העטרופוטי מסנן משותפו בוקס 
    gEl('bdrk').style.borderBottomColor = data.my_team.col;
-   gEl('dynN').innerHTML = `⚽ ${data.my_team.name} ` ;
+   gEl('dynN').innerHTML = `${data.my_team.name} ` ;
    gEl('budget').innerText = data.my_team.budget.toLocaleString();
    gEl('wwW').innerText = data.week;
    
@@ -448,11 +444,11 @@ function BldUi(data) {
 
    gEl('r_tbl').innerHTML= data.table.map(t=>`
       <tr class="${t.name===data.my_team.name?'tr-my':''}">
-          <td style="color:#64748b; font-family:'Oswald',sans;">${t.pos}</td>
+          <td style="color:#64748b; font-weight:bold;">${t.pos}</td>
           <td class="tmr">${t.name}</td>
           <td>${t.pts}</td>
           <td style="color:#64748b;">${t.p}</td>
-          <td style="color:var(--grass-alt);">${t.w}</td>
+          <td style="color:var(--grass-alt); font-weight:bold;">${t.w}</td>
           <td style="color:var(--warn);">${t.l}</td>
           <td style="font-weight:bold; color:#cbd5e1" dir="ltr">${t.gd>0?'+'+t.gd:t.gd}</td>
       </tr>`).join('');
@@ -461,7 +457,6 @@ function BldUi(data) {
 async function _runBld() {
    let rt = await fetch('api/data'); let js = await rt.json();
    if(js.needs_setup) {
-       // רמות הצומם האריאצלים מנקיו הפונק בקרשן! פלאגי כניעת העמות! 
        gEl('setup-screen').style.display = 'flex';
        gEl('sel-render').innerHTML = js.teams_available.map(tc=>`
            <div class="team-option" style="background: linear-gradient(135deg, ${tc.c1}, #121620);" onclick="fireReq('api/pick_team',{team_id:'${tc.id}'})">
@@ -479,18 +474,23 @@ async function _runBld() {
 }
 
 async function pDay(btn) {
-   btn.innerText = "מחשים ופסיקי אמומות..."; btn.style.opacity="0.7"; btn.disabled=true;
+   btn.innerText = "המתן, הליגה משוחקת עכשיו..."; btn.style.opacity="0.7"; btn.disabled=true;
    let ans = await fireReq('api/play', {}, false);
    
-   // מחזיס את העוברית המחזר המשך הממוצא האני שחומם במרקצ הענני! 
    let mdX = ans.findIndex(k => k.is_mine);
    if(mdX>0){ let t=ans.splice(mdX,1)[0]; ans.unshift(t);}
 
    gEl('pOverList').innerHTML = ans.map(m=>{
       let bkC="rk-o"; 
-      if(m.is_mine) { bkC = m.s1 > m.s2 && m.t1 === gEl('dynN').innerText.split('⚽')[1].trim() || m.s2>m.s1 && m.t2 === gEl('dynN').innerText.split('⚽')[1].trim() ? 'rk-my-w':'rk-my-l'; }
-      let cLeft= m.c1.map(x=>`<div> ⚽ <span style="font-weight:normal;">${x}</span></div>`).join('');
-      let cRigt= m.c2.map(x=>`<div><span style="font-weight:normal;">${x}</span> ⚽ </div>`).join('');
+      if(m.is_mine) { 
+         let we_scored_t1 = (m.t1 === gEl('dynN').innerText.trim());
+         let we_scored_t2 = (m.t2 === gEl('dynN').innerText.trim());
+         let we_won = (we_scored_t1 && m.s1 > m.s2) || (we_scored_t2 && m.s2 > m.s1);
+         let we_lost= (we_scored_t1 && m.s1 < m.s2) || (we_scored_t2 && m.s2 < m.s1);
+         if(we_won) bkC='rk-my-w'; else if (we_lost) bkC='rk-my-l';
+      }
+      let cLeft= m.c1.map(x=>`<div> ⚽ ${x} </div>`).join('');
+      let cRigt= m.c2.map(x=>`<div> ${x} ⚽ </div>`).join('');
       
       return `
       <div class="rs-k ${bkC}">
@@ -507,12 +507,12 @@ async function pDay(btn) {
    }).join('');
 
    gEl('over').style.display = 'flex';
-   await _runBld(); // רמומט מפעול רץ אמוי ללוחש! 
-   btn.innerText=" ▶️ העבר אל זמו של נחוש והכרוכה של המזר הלאח.. מחדט פייס יותמצג.. !! ! ) "; btn.style.opacity="1"; btn.disabled=false;
+   await _runBld(); 
+   btn.innerText=" ▶️ שחק את המחזור הקרוב"; btn.style.opacity="1"; btn.disabled=false;
 }
 
 function oQ() { gEl('over').style.display='none'; }
-function reZ(){ fireReq('api/restart'); }
+function reZ(){ if(confirm('למחוק שמירה? כל ההתקדמות במנג\'ר תימחק לחלוטין!')) fireReq('api/restart'); }
 
 _runBld();
 </script>
