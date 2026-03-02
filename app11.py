@@ -4,7 +4,7 @@ from flask import Flask, render_template_string, request, jsonify, session, url_
 
 app = Flask(__name__)
 app.secret_key = "manager_pro_app11_secret_final_master"
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 14 # שומר למשתמש התחברות קפואה ל14 ימים אליו אישית בלבד (משאר קופות ארקייד.. ) 
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 7 # שומר למשתמש התחברות קפואה ל7 ימים אליו אישית בלבד (משאר קופות ארקייד.. ) 
 
 # ===============================
 # DATA & TEAMS PREFERENCES
