@@ -466,4 +466,82 @@ function draw() {
     bgGrad.addColorStop(0, '#0a0a2a'); bgGrad.addColorStop(1, '#1b1b44');
     ctx.fillStyle = bgGrad; ctx.fillRect(0,0, canvas.width, canvas.height);
     
-    // Simple stars in
+    // Simple stars in background moving slowly
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    for(let i=0; i<150; i++) {
+        let starX = ((i * 77) - camera.x * 0.2) % canvas.width;
+        if(starX < 0) starX += canvas.width;
+        ctx.fillRect(starX, (i * 91) % 400, 2, 2);
+    }
+
+    ctx.save();
+    // Screen Shake Implementation
+    if (shake > 0) {
+        ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+        shake *= 0.8; if(shake < 0.5) shake = 0;
+    }
+    
+    // Transform View Camera
+    ctx.translate(-camera.x, 0);
+    
+    // Draw Floor 
+    ctx.fillStyle = '#1c1f2e'; 
+    ctx.fillRect(camera.x - 200, 400, canvas.width + 400, canvas.height); 
+    ctx.fillStyle = '#3ee989'; 
+    ctx.fillRect(camera.x - 200, 400, canvas.width + 400, 4); 
+
+    // Draw Starting boundary (Wall at x=0)
+    ctx.fillStyle = '#445';
+    ctx.fillRect(-100, 0, 100, canvas.height);
+
+    // Draw entities (NO internal translations inside draw!)
+    enemies.forEach(e => e.draw());
+    player.draw();
+    projectiles.forEach(p => p.draw());
+    particles.forEach(p => p.draw());
+    
+    ctx.restore();
+}
+
+function loop() {
+    if (gameState === 'PLAY') {
+         update();
+         draw();
+         requestAnimationFrame(loop);
+    }
+}
+
+// --- Menu Controls ---
+function openCharSelect() {
+    document.getElementById('menu-screen').classList.add('hidden');
+    document.getElementById('char-select').classList.remove('hidden');
+    
+    const grid = document.getElementById('char-grid');
+    grid.innerHTML = '';
+    
+    // Inject Character options
+    for (let k in CLASSES) {
+        let cls = CLASSES[k];
+        let el = document.createElement('div');
+        el.className = 'char-card';
+        el.innerHTML = `
+            <div class="char-icon" style="background:${cls.color}; box-shadow: 0 0 10px ${cls.color}"></div>
+            <h3 style="font-size:12px">${cls.name}</h3>
+            <p style="font-size:8px; color:#aaa; margin-top:5px;">Magic: ${cls.skill}</p>
+        `;
+        el.onclick = () => initGame(k);
+        grid.appendChild(el);
+    }
+}
+
+function backToMenu() {
+    document.getElementById('char-select').classList.add('hidden');
+    document.getElementById('menu-screen').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
+"""
+
+if __name__ == "__main__":
+    app.run(port=5009, debug=True)
