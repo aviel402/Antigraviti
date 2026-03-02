@@ -254,4 +254,293 @@ body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); c
 .budget-pod { font-family: monospace; font-size: 22px; font-weight:bold; color: var(--gold); background: #0b0e14; padding: 6px 14px; border-radius: 4px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.8); }
 
 /* --- PICK SCREEN עידוק השורשי החיוביות לטפס חסיונת חקירת המארגי ! --- */
-#setup-screen { position: absolute; top:0;lef
+#setup-screen { position: absolute; top:0;left:0; width:100%; min-height:100%; background: radial-gradient(circle at 50% 10%, #1e293b, #000); padding-top: 50px; text-align:center; z-index:500;}
+.s-head { font-family: 'Oswald', sans-serif; color:var(--gold); font-size:42px; margin-bottom:10px; text-shadow: 0 5px 15px rgba(0,0,0,0.8); letter-spacing:1px;}
+.s-sub { color: #cbd5e1; font-size: 16px; margin-bottom: 40px;}
+.grid-teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); max-width: 900px; gap:20px; margin:auto; padding:0 20px; }
+.team-option { 
+    border-radius:12px; padding:30px 10px; text-align:center; cursor:pointer; position:relative; overflow:hidden; 
+    border:2px solid rgba(255,255,255,0.05); transition: 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5); border-bottom-width: 8px; border-bottom-style: solid;
+}
+.team-option:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.8); border-color:#fff;}
+.tm-name { font-weight:800; font-size:20px; z-index: 2; position:relative; text-shadow:1px 1px 2px rgba(0,0,0,0.8); color:white;}
+.t-crest-fake { display:inline-flex; width:60px; height:60px; background:rgba(0,0,0,0.5); border-radius:50%; align-items:center; justify-content:center; margin-bottom:15px; border:2px solid; color:#fff; font-family:'Oswald', sans-serif;}
+
+/* TABS NAV */
+.tabs-tray { display: flex; max-width:900px; margin: 20px auto 0; gap:8px; padding:0 15px;}
+.tab-b { flex:1; background: var(--p-panel); color: #94a3b8; border:1px solid rgba(255,255,255,0.1); border-bottom:0; font-family:'Assistant', sans-serif; padding:15px; font-weight:800; font-size:16px; border-radius: 8px 8px 0 0; cursor: pointer; transition:0.3s; box-shadow:inset 0 -10px 15px rgba(0,0,0,0.2);}
+.tab-b.active { color:#fff; background: var(--grass-alt); box-shadow:none; border-color:var(--grass-alt);}
+
+.content-box { display: none; background: rgba(16,23,37,0.7); max-width:900px; margin: 0 auto; min-height:400px; animation: swipe 0.3s; padding:15px; }
+.content-box.active { display:block;}
+@keyframes swipe { 0%{opacity:0; transform:translateX(10px);} 100%{opacity:1;} }
+
+/* --- PLAYER CARDS --- */
+.squad-g { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:15px; }
+.pl-c { 
+   background: linear-gradient(180deg, rgba(31,41,55,1) 0%, rgba(17,24,39,1) 100%); 
+   border:1px solid #374151; border-radius: 12px; text-align:center; padding:0; overflow:hidden; position:relative; box-shadow:0 6px 15px rgba(0,0,0,0.6);
+}
+.pl-pos { background: #374151; padding:2px 8px; font-family:'Oswald',sans-serif; color:#facc15; font-size:11px; font-weight:800; display:inline-block; border-bottom-left-radius:6px;}
+.pl-pos-G {color: #fca5a5;}
+.p-hdr { display:flex; justify-content:space-between; align-items:flex-start;}
+.pl-name { font-size: 18px; font-weight:900; margin-top:5px; margin-bottom:12px; color:#f8fafc;}
+
+.stats-band { display:flex; border-top:1px solid #1f2937; border-bottom:1px solid #1f2937; background:#0f172a;}
+.stat-box { flex:1; padding:8px 0;}
+.st-L { font-size:11px; color:#94a3b8; font-weight:bold; letter-spacing:0.5px; margin-bottom:2px;}
+.st-V { font-size:24px; font-family:'Oswald',sans-serif; font-weight:bold; line-height:1;}
+.c-at { color:#f87171;} .c-df { color:#60a5fa;}
+
+.crd-foot { padding:10px 15px; display:flex; justify-content:space-between; align-items:center; background:#111;}
+.cr-pr { font-size:14px; font-weight:800; font-family:monospace; color:#10b981; letter-spacing:0.5px;}
+
+button.fnc { padding:6px 14px; font-size:13px; font-weight:700; color:#fff; border:none; border-radius:4px; cursor:pointer;}
+.fnc-buy { background:linear-gradient(135deg,#059669,#10b981); } .fnc-sell {background:linear-gradient(135deg,#be123c,#e11d48);} 
+
+select.tct-sc { background:var(--p-panel); color:white; padding:10px 15px; font-size:15px; border-radius:6px; border:1px solid #334155; margin-bottom:15px; font-weight:bold; width:100%; outline:none;}
+
+/* --- TABLE --- */
+.tbl { width:100%; background:var(--p-panel); border-collapse:collapse; border-radius:8px; overflow:hidden; margin-top:10px; border:1px solid #334155;}
+.tbl th, .tbl td { text-align:center; padding:12px; font-size:15px; border-bottom: 1px solid rgba(255,255,255,0.05);}
+.tbl th { background: #0b0f19; font-family:'Assistant',sans-serif; font-size: 14px; color:var(--gold); font-weight: bold;}
+.tr-my { background: rgba(5,150,105, 0.2); font-weight:900;} .tr-my td:nth-child(2){color:var(--neon-t); border-bottom: 2px solid; padding-left:0;}
+.tmr { text-align:right !important; white-space:nowrap;}
+
+/* MASTER ACTION FOOT */
+.flt-wrap { position:fixed; bottom:0; left:0; width:100%; text-align:center; z-index:400; background:linear-gradient(0deg, #000 30%, transparent 100%); padding:25px 0;}
+.pl-wk { padding:15px 45px; background: var(--grass-alt); color:#fff; font-size:20px; font-family:'Assistant'; border-radius:30px; font-weight:900; letter-spacing:0.5px; box-shadow:0 10px 30px rgba(0,0,0,0.6); border:none; outline:none; cursor:pointer; text-shadow:0 -1px 3px rgba(0,0,0,0.8); border-top:2px solid rgba(255,255,255,0.4); }
+.pl-wk:hover { background: #06b6d4; }
+.reboot { font-size: 12px; font-weight: bold; color:#777; position:absolute; bottom:5px; right:15px; cursor:pointer; transition: 0.2s;}
+.reboot:hover { color: #f43f5e; text-decoration:underline; }
+
+/* MODAL RESULTS */
+#over { position:fixed; inset:0; background:rgba(2,6,23,0.96); z-index:900; overflow-y:auto; padding-top:40px; display:none; flex-direction:column; align-items:center;}
+.scr-p { display:flex; flex-direction:column; gap:15px; width:90%; max-width:600px;}
+.rs-k { background:rgba(255,255,255,0.05); border-left:4px solid transparent; border-radius:8px; display:flex; overflow:hidden;}
+.rk-my-w { border-color: var(--grass-alt); background: rgba(5,150,105, 0.15);} .rk-my-l{ border-color:var(--warn);}
+.rmb-n { flex:2; padding:15px; font-weight:bold; font-size: 18px; color:#cbd5e1;}
+.rmb-L {text-align:right;} .rmb-R {text-align:left;}
+.rsx { background:#0f172a; flex:0.6; align-items:center; justify-content:center; display:flex; font-size:26px; font-family:'Oswald', monospace; font-weight:bold; letter-spacing:4px;}
+.rstxt { padding:10px 15px; font-size:14px; color:#64748b; line-height: 1.6;}
+.rstxt-L{text-align:right;border-left:1px dashed #334155;} .rstxt-R{text-align:left;}
+
+</style>
+</head>
+<body>
+
+<a href="/" class="arcade-btn">X חזור למרכזיית הארקייד לחילופים שלכם (HOME_BASE!)</a>
+
+<!-- עוקב משחקים הבחינת הקודר מועצרי מגיד : כנרת אינדיות המקורסל VERCEL שמרסק!!  -->
+<!-- מכתבת התמימות כיוון תדממי הפאב. השקת תפס חרזי הבלאגים תוארה!  -->
+
+<div id="setup-screen" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+   <div style="margin:auto 0; padding-bottom:50px;">
+        <h1 class="s-head">BORN FOR THE DUGOUT</h1>
+        <div class="s-sub">כדי לצאת לדרך כמאמן בבוגרים העלו על הדפוס - אנא חנחו אל איזו ליגת מוקמו מועדוניה חיוי תחלו למכירות?</div>
+        <div id="sel-render" class="grid-teams"></div>
+   </div>
+</div>
+
+<div id="m-body" style="display:none;">
+
+    <div class="header-bar" id="bdrk">
+        <h2 class="hdr-title" id="dynN">-- מאתחל רעשים לחילוצי עליים משולבות מנותר אולי --</h2>
+        <div class="budget-pod">€<span id="budget" style="color:var(--txt);">0</span></div>
+    </div>
+
+    <div class="tabs-tray">
+        <button class="tab-b active" onclick="goTab('vSqd', this)">מרצפי כוח מטר ברוט הקור ⚽</button>
+        <button class="tab-b" onclick="goTab('vMkt', this)">לשכנויות רכז חיפוים וליג 🔎</button>
+        <button class="tab-b" onclick="goTab('vTbl', this)">לופש שורות מעמיד פליי-מריס (Table)</button>
+    </div>
+
+    <div class="content-box active" id="vSqd">
+         <select class="tct-sc" onchange="fireReq('formation',{formation:this.value}, false)">
+            <option value="4-4-2">איזוני מחפשת קווי הראוי טוען מחכים... מיומחות ב(4-4-2)..</option>
+            <option value="4-3-3">מירוצי הכנס תנוחת קרני התקו - 4-3-3...</option>
+            <option value="5-4-1">מעקרות מסימי נמצי ביצי משמע רשי המיוז. שוזב מודם קר.</option>
+        </select>
+        <div class="squad-g" id="r_sq"></div>
+    </div>
+    
+    <div class="content-box" id="vMkt">
+        <div style="margin-bottom:20px; background: rgba(0,0,0,0.3); padding:10px 15px; border-left:4px solid #facc15; border-radius:5px; color:#94a3b8; font-size:14px; font-weight: bold;">
+            רטיפת חוסי הפתוחות הענשת אצמוציות פאסיבה כלכילן! כל רסימת שומת צלמיות כפכופי נשרו מקנר אמות החומף מסויים בעשוק נער! 
+        </div>
+        <div class="squad-g" id="r_mkt"></div>
+    </div>
+    
+    <div class="content-box" id="vTbl">
+        <div style="font-weight:bold; color:#cbd5e1; font-size:18px; margin-bottom:5px;"> מירוצ שמרד צף כחצי מיפלת לחם עונשי השביות משד! כרעי ליג השבעת כרחי כליס משבר... >  #<span id="wwW"></span></div>
+        <table class="tbl">
+             <thead><tr><th>מקוצ קוט</th><th class="tmr">אינו קל מגר</th><th>ניפ מוקצות (Pts)</th><th>רוף מרעושי (PLayD.) </th><th>כבישים(wins)</th><th>חסרים.מצצרי קפאונוח(Loss.es)</th><th>כרוזי ספק המפדח!! . (+הלל ) (Gd -  _)</th></tr></thead>
+             <tbody id="r_tbl"></tbody>
+        </table>
+    </div>
+
+    <div class="flt-wrap">
+        <button class="pl-wk" onclick="pDay(this)"> ▶️ מרצס וממחי המפקר... רוצ משמר גולי!!! משח חוממי המחזור השוחמ </button>
+        <span class="reboot" onclick="reZ()">(חסלו צועצי פירצי מקצד מעריכי הדוסי במעוף חזור איכיוח פוערי נזמג ... .. 🗑️)</span>
+    </div>
+</div>
+
+<div id="over">
+    <div style="max-width:600px; width:90%; border-bottom:1px solid #334155; padding-bottom:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+       <h1 style="color:#fff; font-family:'Oswald',sans-serif; letter-spacing:1px; margin:0;">נמצאו החשומים והשמע כוון מציר שמע תמדי כוס קר...🏆</h1>
+       <button style="background:var(--grass-alt); color:#fff; padding:10px 20px; font-size:16px; font-weight:bold; cursor:pointer; border:none; border-radius:30px; box-shadow:0 0 10px rgba(5,150,105,0.4);" onclick="oQ()">ספו עמע צולט מסדר לאיבו ציר ככומ עברח ...   ⮞</button>
+    </div>
+    <div class="scr-p" id="pOverList"></div>
+</div>
+
+<script>
+// המנחי הפרוי המהגור הURL הגנות עמע העובש החצרו תרמת... (URL-FOR PYTHON ENGINE SAFEHOUSE ) ! :D!! !! 
+
+const API = {
+   data: "{{ url_for('get_data') }}",
+   pick: "{{ url_for('pick_team') }}",
+   play: "{{ url_for('play_week') }}",
+   formation: "{{ url_for('set_formation') }}",
+   transfer: "{{ url_for('transfer') }}",
+   restart: "{{ url_for('force_restart') }}"
+};
+
+function gEl(id){ return document.getElementById(id); }
+
+function goTab(vid, btn) {
+    document.querySelectorAll('.content-box').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-b').forEach(x => x.classList.remove('active'));
+    gEl(vid).classList.add('active');
+    btn.classList.add('active');
+}
+
+async function fireReq(epKey, payload={}, withLoad=true) {
+    let url = API[epKey];
+    let pms = {method: payload ? 'POST' : 'GET'}
+    if(payload && Object.keys(payload).length>0){ 
+       pms.body=JSON.stringify(payload); 
+       pms.headers={'Content-Type':'application/json'} 
+    }
+    let rx = await fetch(url, pms);
+    let rz = await rx.json();
+    if(rz.err) alert(rz.err); else if (rz.msg) alert(rz.msg);
+    if(withLoad) _runBld();
+    return rz;
+}
+
+function RPlCard(p, mode="sell") {
+    let ppClass = p.pos === "GK" ? "pl-pos-G" : "";
+    
+    // נירמי הפלוות ללוחים הנשי סעי שסו משם טהק משפ ... !!!! לא מצפ לורח מוחס.. - אלה דחור רסמ ! :))))))) 
+    
+    let btnMsgCnf = "אישות חיקן מגרעות ההחתר תוח לקיצה משובלת "+ (p.value).toLocaleString() +"€ קרובים תעש פגז!! הנה מונם?";
+    let sellMsgCnf = "פלוטו נגר רסד מקצו חסדי חורשות (מימיי טד תחשמ מחלי קלצ - "+(p.value*0.75).toLocaleString() +"€, מנעלי גפכ אדמי קמו סלח קצו עש ?";
+    
+    let actBtn = mode === "buy" 
+        ? `<button class="fnc fnc-buy" onclick="if(confirm('${btnMsgCnf}')) fireReq('transfer', {action:'buy', player_id:'${p.id}'})">חסים של קניה! אגו טלוחי </button>`
+        : `<button class="fnc fnc-sell" onclick="if(confirm('${sellMsgCnf}')) fireReq('transfer', {action:'sell', player_id:'${p.id}'})">מינו קפץ מחב כני חוס</button>`;
+        
+    return `
+    <div class="pl-c">
+        <div class="p-hdr"><div class="pl-pos ${ppClass}">${p.pos}</div></div>
+        <div class="pl-name">${p.name}</div>
+        <div class="stats-band">
+            <div class="stat-box" style="border-right:1px solid #1f2937;"><div class="st-L">עונר הצו קרק מחוס סרח - חם פוט חצר </div><div class="st-V c-at">${p.att}</div></div>
+            <div class="stat-box"><div class="st-L">קרצ מסח דומח חשק מפגי יור קרזמ צל צא</div><div class="st-V c-df">${p.deny}</div></div>
+        </div>
+        <div class="crd-foot"><div class="cr-pr">€ ${(p.value/1000000).toFixed(1)}M</div>${actBtn}</div>
+    </div>`
+}
+
+function BldUi(data) {
+   gEl('bdrk').style.borderBottomColor = data.my_team.col;
+   gEl('dynN').innerHTML = `⚽ ${data.my_team.name}` ;
+   gEl('budget').innerText = data.my_team.budget.toLocaleString();
+   gEl('wwW').innerText = data.week;
+   
+   document.querySelector('.tct-sc').value = data.my_team.formation;
+   gEl('r_sq').innerHTML = data.my_team.squad.map(x=>RPlCard(x,"sell")).join('');
+   gEl('r_mkt').innerHTML= data.market.map(x=>RPlCard(x,"buy")).join('');
+
+   gEl('r_tbl').innerHTML= data.table.map(t=>`
+      <tr class="${t.name===data.my_team.name?'tr-my':''}">
+          <td style="color:#64748b; font-weight:bold;">${t.pos}</td>
+          <td class="tmr">${t.name}</td>
+          <td>${t.pts}</td>
+          <td style="color:#64748b;">${t.p}</td>
+          <td style="color:var(--grass-alt); font-weight:bold;">${t.w}</td>
+          <td style="color:var(--warn);">${t.l}</td>
+          <td style="font-weight:bold; color:#cbd5e1" dir="ltr">${t.gd>0?'+'+t.gd:t.gd}</td>
+      </tr>`).join('');
+}
+
+async function _runBld() {
+   let rt = await fetch(API.data); 
+   let js = await rt.json();
+   if(js.needs_setup) {
+       gEl('setup-screen').style.display = 'flex';
+       gEl('sel-render').innerHTML = js.teams_available.map(tc=>`
+           <div class="team-option" style="background: linear-gradient(135deg, ${tc.c1}, #121620); border-bottom-color: ${tc.c2};" onclick="fireReq('pick',{team_id:'${tc.id}'})">
+              <div class="t-crest-fake" style="color:${tc.c1}; background:${tc.c2}; font-weight:800; border-color:${tc.c1}">${tc.name[0]}${tc.name[1]}</div><br>
+              <span class="tm-name" style="color:${tc.c2}">${tc.name}</span>
+           </div>
+       `).join('');
+       gEl('m-body').style.display='none';
+   } else {
+       gEl('setup-screen').style.display = 'none';
+       gEl('m-body').style.display = 'block';
+       BldUi(js);
+   }
+}
+
+async function pDay(btn) {
+   let rzTxt = btn.innerText;
+   btn.innerText = "מחשים ופסיקי אמומות מוג פלט חי כפר ... ..."; btn.style.opacity="0.7"; btn.disabled=true;
+   let ans = await fireReq('play', {}, false);
+   
+   let mdX = ans.findIndex(k => k.is_mine);
+   if(mdX>0){ let t=ans.splice(mdX,1)[0]; ans.unshift(t);}
+
+   gEl('pOverList').innerHTML = ans.map(m=>{
+      let bkC="rk-o"; 
+      if(m.is_mine) { 
+         let we_scored_t1 = (m.t1 === gEl('dynN').innerText.split('⚽')[1].trim());
+         let we_scored_t2 = (m.t2 === gEl('dynN').innerText.split('⚽')[1].trim());
+         let we_won = (we_scored_t1 && m.s1 > m.s2) || (we_scored_t2 && m.s2 > m.s1);
+         let we_lost= (we_scored_t1 && m.s1 < m.s2) || (we_scored_t2 && m.s2 < m.s1);
+         if(we_won) bkC='rk-my-w'; else if (we_lost) bkC='rk-my-l';
+      }
+      let cLeft= m.c1.map(x=>`<div> ⚽ ${x} </div>`).join('');
+      let cRigt= m.c2.map(x=>`<div> ${x} ⚽ </div>`).join('');
+      
+      return `
+      <div class="rs-k ${bkC}">
+          <div style="flex:1;">
+             <div class="rmb-n rmb-L" style="${m.s1>m.s2?'color:#fff':'color:#94a3b8'}">${m.t1}</div>
+             <div class="rstxt rstxt-L">${cLeft}</div>
+          </div>
+          <div class="rsx" style="border-right:1px solid rgba(255,255,255,0.05); border-left:1px solid rgba(255,255,255,0.05)">${m.s1} : ${m.s2}</div>
+          <div style="flex:1;">
+             <div class="rmb-n rmb-R" style="${m.s2>m.s1?'color:#fff':'color:#94a3b8'}">${m.t2}</div>
+             <div class="rstxt rstxt-R">${cRigt}</div>
+          </div>
+      </div>`
+   }).join('');
+
+   gEl('over').style.display = 'flex';
+   await _runBld(); 
+   btn.innerText = rzTxt; btn.style.opacity="1"; btn.disabled=false;
+}
+
+function oQ() { gEl('over').style.display='none'; }
+function reZ(){ if(confirm('למעלי צמחן לרוחש וכו אעכ הוממ... איפא נצח! ??? 💀💀')) fireReq('restart'); }
+
+_runBld();
+</script>
+</body>
+</html>
+"""
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
