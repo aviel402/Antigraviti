@@ -37,47 +37,48 @@ def create_dummy_app(text):
         return a(text)
     return dummy
 
-# --- 2. ייבוא בטוח של האפליקציות ---
-# נסה לייבא - אם לא קיים, השתמש בדמה
-try: from app1 import app as game1
-except ImportError: game1 = create_dummy_app("משחק 1")
+try:
+    # --- 2. ייבוא בטוח של האפליקציות ---
+    # נסה לייבא - אם לא קיים, השתמש בדמה
+    try: from app1 import app as game1
+    except ImportError: game1 = create_dummy_app("משחק 1")
 
-try: from app2 import app as game2
-except ImportError: game2 = create_dummy_app("משחק 2")
+    try: from app2 import app as game2
+    except ImportError: game2 = create_dummy_app("משחק 2")
 
-try: from app3 import app as game3
-except ImportError: game3 = create_dummy_app("משחק 3")
+    try: from app3 import app as game3
+    except ImportError: game3 = create_dummy_app("משחק 3")
 
-try: from app4 import app as game4
-except ImportError: game4 = create_dummy_app("משחק 4")
+    try: from app4 import app as game4
+    except ImportError: game4 = create_dummy_app("משחק 4")
 
-try: from app5 import app as game5
-except ImportError: game5 = create_dummy_app("משחק 5")
+    try: from app5 import app as game5
+    except ImportError: game5 = create_dummy_app("משחק 5")
 
-try: from app6 import app as game6
-except ImportError: game6 = create_dummy_app("משחק 6")
+    try: from app6 import app as game6
+    except ImportError: game6 = create_dummy_app("משחק 6")
 
-try: from app7 import app as game7
-except ImportError: game7 = create_dummy_app("משחק 7")
+    try: from app7 import app as game7
+    except ImportError: game7 = create_dummy_app("משחק 7")
 
-try: from app8 import app as game8
-except ImportError: game8 = create_dummy_app("משחק 8")
+    try: from app8 import app as game8
+    except ImportError: game8 = create_dummy_app("משחק 8")
 
-try: from app9 import app as game9
-except ImportError: game9 = create_dummy_app("CLOVER")
+    try: from app9 import app as game9
+    except ImportError: game9 = create_dummy_app("CLOVER")
 
-try: from app11 import app as game11
-except ImportError: game11 = create_dummy_app("CLOVER")
+    try: from app11 import app as game11
+    except ImportError: game11 = create_dummy_app("CLOVER")
 
-try: from app10 import app as game10
-except ImportError: game10 = create_dummy_app("CLOVER")
+    try: from app10 import app as game10
+    except ImportError: game10 = create_dummy_app("CLOVER")
 
-try: from php import app as php_app
-except ImportError: php_app = create_dummy_app("PHP App")
+    try: from php import app as php_app
+    except ImportError: php_app = create_dummy_app("PHP App")
 
-try: from HTML import app as html_app
-except ImportError: html_app = create_dummy_app("html App")
-
+    try: from HTML import app as html_app
+    except ImportError: html_app = create_dummy_app("html App")
+except:exit()
 # --- 3. הלאוצ'ר הראשי ---
 main_app = Flask(__name__)
 
@@ -217,6 +218,7 @@ app = DispatcherMiddleware(main_app, {
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
