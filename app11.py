@@ -3,14 +3,14 @@ import uuid
 from flask import Flask, request, jsonify, session
 
 app = Flask(__name__)
-app.secret_key = "manager_pro_app11_secret_final_v5"
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 14 # 14 יום סשן לשמירת הקבוצה בארקייד 
+app.secret_key = "manager_pro_app11_secret_final_master_fix"
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 14 # 14 ימים
 
 # ===============================
-# מאגרי נתונים ומחלקות המשחק 
+# נתונים (Players, Teams, Names)
 # ===============================
-FIRST_NAMES =["ערן", "מנור", "אוסקר", "מונס", "דיא", "דניאל", "עומר", "שרן", "בירם", "דולב", "יוגב", "ליאור", "רועי", "דוד"]
-LAST_NAMES =["זהבי", "סולומון", "גלוך", "דבור", "סבע", "פרץ", "אצילי", "ייני", "כיאל", "חזיזה", "אוחיון", "כהן", "רביבו", "שרי"]
+FIRST_NAMES =["ערן", "מנור", "אוסקר", "מונס", "דיא", "דניאל", "עומר", "שרן", "בירם", "דולב", "יוגב", "ליאור", "רועי", "דוד", "יהב", "עידו"]
+LAST_NAMES =["זהבי", "סולומון", "גלוך", "דבור", "סבע", "פרץ", "אצילי", "ייני", "כיאל", "חזיזה", "אוחיון", "כהן", "אבו פאני", "רביבו", "גלזר"]
 
 TEAMS_DB =[
     {"name": "מכבי תל אביב", "primary": "#fcc70e", "secondary": "#051660"},
@@ -26,17 +26,26 @@ TEAMS_DB =[
 POSITIONS =["GK", "DEF", "DEF", "DEF", "MID", "MID", "MID", "FWD", "FWD"]
 POS_ORDER = {"GK": 1, "DEF": 2, "MID": 3, "FWD": 4} 
 
+# ===============================
+# CLASSES
+# ===============================
 class Player:
     def __init__(self, is_gk=False):
         self.id = str(uuid.uuid4())
         self.name = f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}"
         self.pos = "GK" if is_gk else random.choice(POSITIONS[1:])
+        
         base_stats = random.randint(62, 94)
         self.att = base_stats + random.randint(-15, 20)
         self.deny = base_stats + random.randint(-15, 20)
         
-        if self.pos == "GK": self.att = random.randint(10, 30); self.deny += 20
-        elif self.pos == "FWD": self.att += 20; self.deny = random.randint(20, 50)
+        if self.pos == "GK": 
+            self.att = random.randint(10, 30)
+            self.deny += 20
+        elif self.pos == "FWD": 
+            self.att += 20
+            self.deny = random.randint(20, 50)
+            
         self.value = int(((self.att * 0.5) + (self.deny * 0.5)) * 15000) + random.randint(-50000, 200000)
         
     def to_dict(self): 
@@ -53,7 +62,7 @@ class Team:
         self.goals_for = 0; self.goals_against = 0
         self.budget = 30000000 
         self.formation = "4-4-2"
-        self.squad = [Player(is_gk=True)] +[Player() for _ in range(12)]
+        self.squad = [Player(is_gk=True)] + [Player() for _ in range(12)]
 
     def get_power(self):
         avg_att = sum(p.att for p in self.squad) / max(len(self.squad), 1)
@@ -63,9 +72,10 @@ class Team:
         return int(avg_att), int(avg_def)
         
     def get_random_scorer(self):
-         attackers = [p for p in self.squad if p.pos in ["FWD", "MID"]]
+         attackers = [p for p in self.squad if p.pos in["FWD", "MID"]]
          if attackers:
-             return random.choices(attackers, weights=[3 if p.pos=="FWD" else 1 for p in attackers])[0].name
+             scorer = random.choices(attackers, weights=[3 if p.pos=="FWD" else 1 for p in attackers])[0]
+             return scorer.name
          return random.choice(self.squad).name
 
 class League:
@@ -114,30 +124,31 @@ class League:
         else: 
             t1.points += 1; t2.points += 1; t1.draws += 1; t2.draws += 1
             
-        return {"t1": t1.name, "s1": score1, "c1": t1_scorers, 
-                "t2": t2.name, "s2": score2, "c2": t2_scorers,
-                "is_mine": (t1.id == self.my_team_id or t2.id == self.my_team_id)}
+        return {
+            "t1": t1.name, "s1": score1, "c1": t1_scorers, 
+            "t2": t2.name, "s2": score2, "c2": t2_scorers,
+            "is_mine": (t1.id == self.my_team_id or t2.id == self.my_team_id)
+        }
 
 # ===============================
-# ארכיטקטורת Serverless וסשנים יציבה
+# DATA MANAGEMENT (Vercel Serverless Ready)
 # ===============================
 LEAGUES_DB = {}
 
 def get_game():
-    uid = session.get('mngr11_pro_key_500fix')
+    uid = session.get('mngr_11_pro_session_id')
     if not uid or uid not in LEAGUES_DB:
         uid = str(uuid.uuid4())
         session.permanent = True
-        session['mngr11_pro_key_500fix'] = uid
+        session['mngr_11_pro_session_id'] = uid
         LEAGUES_DB[uid] = League()
     return LEAGUES_DB[uid]
 
 # ===============================
-# ממשק בקשות רשת / REST API
+# ROUTES / API ENDPOINTS
 # ===============================
 @app.route('/')
 def home():
-    # פתרון לשגיאת 500: פשוט מניח טקסט HTML עליון כסטרינג ישיר ולא מעביר מנוע. הכי בטוח במיוחד על השרת שלך.
     return HTML_TEMPLATE
 
 @app.route('/api/data', methods=['GET'])
@@ -149,20 +160,32 @@ def get_data():
 
     my_team = g.get_team(g.my_team_id)
     table = sorted(g.teams, key=lambda t: (t.points, t.goals_for - t.goals_against), reverse=True)
+    
     squad_sorted = sorted(my_team.squad, key=lambda p: POS_ORDER.get(p.pos, 5))
     market_sorted = sorted(g.market, key=lambda p: p.value, reverse=True)
 
     return jsonify({
         "needs_setup": False,
-        "my_team": { "name": my_team.name, "budget": my_team.budget, "formation": my_team.formation, "squad":[p.to_dict() for p in squad_sorted], "col": my_team.primary },
-        "table":[{"pos": i+1, "name": t.name, "pts": t.points, "p": t.games_played, "w":t.wins, "d":t.draws, "l":t.losses, "gd": t.goals_for - t.goals_against} for i, t in enumerate(table)],
+        "my_team": { 
+            "name": my_team.name, "budget": my_team.budget, 
+            "formation": my_team.formation, "squad": [p.to_dict() for p in squad_sorted], 
+            "col": my_team.primary 
+        },
+        "table":[
+            {"pos": i+1, "name": t.name, "pts": t.points, "p": t.games_played, 
+             "w": t.wins, "d": t.draws, "l": t.losses, "gd": t.goals_for - t.goals_against} 
+             for i, t in enumerate(table)
+        ],
         "market": [p.to_dict() for p in market_sorted],
         "week": g.week
     })
 
 @app.route('/api/pick_team', methods=['POST'])
 def pick_team():
-    get_game().set_player_team(request.json.get('team_id'))
+    data = request.get_json(silent=True) or {}
+    team_id = data.get('team_id')
+    if team_id:
+        get_game().set_player_team(team_id)
     return jsonify({"status": "success"})
 
 @app.route('/api/play', methods=['POST'])
@@ -171,49 +194,60 @@ def play_week():
 
 @app.route('/api/formation', methods=['POST'])
 def set_formation():
-    get_game().get_team(get_game().my_team_id).formation = request.json.get('formation')
+    data = request.get_json(silent=True) or {}
+    formation = data.get('formation')
+    if formation:
+        get_game().get_team(get_game().my_team_id).formation = formation
     return jsonify({"status": "ok"})
 
 @app.route('/api/transfer', methods=['POST'])
 def transfer():
     g = get_game()
-    action = request.json.get('action')
-    pid = request.json.get('player_id')
+    data = request.get_json(silent=True) or {}
+    action = data.get('action')
+    pid = data.get('player_id')
     my_team = g.get_team(g.my_team_id)
     
     if action == 'buy':
         target = next((p for p in g.market if p.id == pid), None)
         if target and my_team.budget >= target.value:
-            if len(my_team.squad) >= 20: return jsonify({"err": "יש לך יותר מדי שחקנים בסגל. עליך למכור מישהו קודם."})
+            if len(my_team.squad) >= 20: 
+                return jsonify({"err": "הסגל מלא (עד 20 שחקנים מותרים). עליך למכור מישהו קודם."})
             my_team.budget -= target.value
             my_team.squad.append(target)
             g.market.remove(target)
-            return jsonify({"msg": f"בוצע! החתמתם הרגע את '{target.name}' בסגל קבוצתכם."})
-        return jsonify({"err": "קופת המועדון ריקה מידי להחתמת שחקן זה!"})
+            return jsonify({"msg": f"רכש מוצלח! {target.name} צורף לקבוצה."})
+        return jsonify({"err": "העברה בוטלה: אין לקבוצה מספיק תקציב לבצע את העסקה."})
 
     if action == 'sell':
         target = next((p for p in my_team.squad if p.id == pid), None)
         if target: 
-             if len([p for p in my_team.squad if p.pos == "GK"]) < 2 and target.pos == "GK":
-                   return jsonify({"err":"אסור למכור את שוער הקבוצה היחידי שנותר בהגנה. קנה שוער אחר לפני המכירה."})
+             gks =[p for p in my_team.squad if p.pos == "GK"]
+             if target.pos == "GK" and len(gks) <= 1:
+                   return jsonify({"err": "מכירה בוטלה: אתה חייב להשאיר לפחות שוער אחד פעיל בסגל הקבוצה."})
+             
              if len(my_team.squad) > 13: 
                 my_team.budget += int(target.value * 0.75)
                 my_team.squad.remove(target)
-                return jsonify({"msg": "עסקת מכירת השחקן עברה בהצלחה! הקופה תעודכן במחיר שהוחזר מביצועים."})
-             else: return jsonify({"err": "שמור על חדר ההלבשה מלא! עליך להחזיק בקבוצה בסך המינימלי המותר לתפעולה: מינימום של 13 איש. אין מנדט לשחרורים על מעמדה"})
-        return jsonify({"err": "לא נבחר שחקן קיים בתצורות הקבצה הנוכחיות. "})
+                return jsonify({"msg": "השחקן נמכר לקבוצה אחרת והתקציב התווסף לחשבון (75% מערכו)."})
+             else: 
+                 return jsonify({"err": "מכירה בוטלה: אסור להוריד את הסגל לפחות מ-13 שחקנים בארגון הליגה."})
+                 
+        return jsonify({"err": "שגיאה במערכת."})
 
-    return jsonify({"err": "ספק דחיות של התנתקות אינן אוחזת כל עדיפות ממש."})
+    return jsonify({"err": "פעולה לא חוקית בשרת ההעברות."})
 
 @app.route('/api/restart')
 def force_restart():
     session.clear()
     return jsonify({"ok": True})
 
+
 # ===============================
-# טופס UI שנוסחו תורגם למושגי כדורגל טבעיים (100% הלימות לחשיבות טמפרמנט מנג'ר ספורטיביים)
+# FRONTEND / HTML STRING COMPLETE
 # ===============================
-HTML_TEMPLATE = """<!DOCTYPE html>
+HTML_TEMPLATE = """
+<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
@@ -221,7 +255,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <title>Manager PRO XI</title>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
 <style>
-:root { --p-bg: #121620; --p-panel: rgba(28, 36, 52, 0.95); --gold: #d4af37; --grass-alt: #059669; --neon-t: #38bdf8; --txt: #e2e8f0; }
+:root { 
+    --p-bg: #121620; 
+    --p-panel: rgba(28, 36, 52, 0.95);
+    --gold: #d4af37; 
+    --grass-alt: #059669; 
+    --neon-t: #38bdf8; 
+    --txt: #e2e8f0; 
+}
 
 body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); color: var(--txt); font-family: 'Assistant', sans-serif; min-height:100vh; padding-bottom: 75px;}
 * { box-sizing: border-box;}
@@ -230,19 +271,26 @@ body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); c
 .arcade-btn:hover { background: #fff; color: #000; }
 
 .header-bar { 
-   position: sticky; top:0; z-index:100; background: linear-gradient(135deg, rgba(13,24,37,0.9), rgba(16,36,53,1)); 
-   border-bottom: 3px solid transparent; box-shadow: 0 4px 15px rgba(0,0,0,0.5); padding: 25px 20px 15px; display: flex; justify-content: space-between; align-items:flex-end; backdrop-filter:blur(8px);
+   position: sticky; top:0; z-index:100;
+   background: linear-gradient(135deg, rgba(13,24,37,0.9), rgba(16,36,53,1)); 
+   border-bottom: 3px solid transparent; 
+   box-shadow: 0 4px 15px rgba(0,0,0,0.5); padding: 25px 20px 15px; text-align:right;
+   display: flex; justify-content: space-between; align-items:flex-end; backdrop-filter:blur(8px);
 }
-.hdr-title { font-weight: 800; font-size: 24px; color: #fff; margin:0; display:flex; align-items:center; gap:8px;}
+.hdr-title { font-family: 'Assistant', sans-serif; font-weight: 800; font-size: 24px; color: #fff; margin:0; display:flex; align-items:center; gap:8px;}
 .budget-pod { font-family: monospace; font-size: 22px; font-weight:bold; color: var(--gold); background: #0b0e14; padding: 6px 14px; border-radius: 4px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.8); }
 
 #setup-screen { position: absolute; top:0;left:0; width:100%; min-height:100%; background: radial-gradient(circle at 50% 10%, #1e293b, #000); padding-top: 50px; text-align:center; z-index:500;}
 .s-head { font-family: 'Oswald', sans-serif; color:var(--gold); font-size:42px; margin-bottom:10px; text-shadow: 0 5px 15px rgba(0,0,0,0.8); letter-spacing:1px;}
 .s-sub { color: #cbd5e1; font-size: 16px; margin-bottom: 40px;}
 .grid-teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); max-width: 900px; gap:20px; margin:auto; padding:0 20px; }
-.team-option { border-radius:12px; padding:30px 10px; text-align:center; cursor:pointer; position:relative; overflow:hidden; border:2px solid rgba(255,255,255,0.05); transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border-bottom-width: 8px; border-bottom-style: solid; }
+.team-option { 
+    border-radius:12px; padding:30px 10px; text-align:center; cursor:pointer; position:relative; overflow:hidden; 
+    border:2px solid rgba(255,255,255,0.05); transition: 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5); border-bottom-width: 8px; border-bottom-style: solid;
+}
 .team-option:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.8); border-color:#fff;}
-.tm-name { font-weight:800; font-size:20px; z-index: 2; position:relative; color:white; }
+.tm-name { font-weight:800; font-size:20px; z-index: 2; position:relative; text-shadow:1px 1px 2px rgba(0,0,0,0.8); color:white;}
 .t-crest-fake { display:inline-flex; width:60px; height:60px; background:rgba(0,0,0,0.5); border-radius:50%; align-items:center; justify-content:center; margin-bottom:15px; border:2px solid; color:#fff; font-family:'Oswald', sans-serif;}
 
 .tabs-tray { display: flex; max-width:900px; margin: 20px auto 0; gap:8px; padding:0 15px;}
@@ -254,7 +302,10 @@ body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); c
 @keyframes swipe { 0%{opacity:0; transform:translateX(10px);} 100%{opacity:1;} }
 
 .squad-g { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:15px; }
-.pl-c { background: linear-gradient(180deg, rgba(31,41,55,1) 0%, rgba(17,24,39,1) 100%); border:1px solid #374151; border-radius: 12px; text-align:center; padding:0; overflow:hidden; position:relative; box-shadow:0 6px 15px rgba(0,0,0,0.6); }
+.pl-c { 
+   background: linear-gradient(180deg, rgba(31,41,55,1) 0%, rgba(17,24,39,1) 100%); 
+   border:1px solid #374151; border-radius: 12px; text-align:center; padding:0; overflow:hidden; position:relative; box-shadow:0 6px 15px rgba(0,0,0,0.6);
+}
 .pl-pos { background: #374151; padding:2px 8px; font-family:'Oswald',sans-serif; color:#facc15; font-size:11px; font-weight:800; display:inline-block; border-bottom-left-radius:6px;}
 .pl-pos-G {color: #fca5a5;}
 .p-hdr { display:flex; justify-content:space-between; align-items:flex-start;}
@@ -262,11 +313,12 @@ body { margin: 0; background: linear-gradient(to top right, #0d1117, #1e293b); c
 
 .stats-band { display:flex; border-top:1px solid #1f2937; border-bottom:1px solid #1f2937; background:#0f172a;}
 .stat-box { flex:1; padding:8px 0;}
-.st-L { font-size:12px; color:#94a3b8; font-weight:bold; letter-spacing:0.5px; margin-bottom:2px;}
+.st-L { font-size:11px; color:#94a3b8; font-weight:bold; letter-spacing:0.5px; margin-bottom:2px;}
 .st-V { font-size:24px; font-family:'Oswald',sans-serif; font-weight:bold; line-height:1;}
 .c-at { color:#f87171;} .c-df { color:#60a5fa;}
+
 .crd-foot { padding:10px 15px; display:flex; justify-content:space-between; align-items:center; background:#111;}
-.cr-pr { font-size:14px; font-weight:800; font-family:monospace; color:#10b981;}
+.cr-pr { font-size:14px; font-weight:800; font-family:monospace; color:#10b981; letter-spacing:0.5px;}
 
 button.fnc { padding:6px 14px; font-size:13px; font-weight:700; color:#fff; border:none; border-radius:4px; cursor:pointer;}
 .fnc-buy { background:linear-gradient(135deg,#059669,#10b981); } .fnc-sell {background:linear-gradient(135deg,#be123c,#e11d48);} 
@@ -275,14 +327,14 @@ select.tct-sc { background:var(--p-panel); color:white; padding:10px 15px; font-
 
 .tbl { width:100%; background:var(--p-panel); border-collapse:collapse; border-radius:8px; overflow:hidden; margin-top:10px; border:1px solid #334155;}
 .tbl th, .tbl td { text-align:center; padding:12px; font-size:15px; border-bottom: 1px solid rgba(255,255,255,0.05);}
-.tbl th { background: #0b0f19; font-size: 14px; color:var(--gold); font-weight: bold;}
+.tbl th { background: #0b0f19; font-family:'Assistant',sans-serif; font-size: 14px; color:var(--gold); font-weight: bold;}
 .tr-my { background: rgba(5,150,105, 0.2); font-weight:900;} .tr-my td:nth-child(2){color:var(--neon-t); border-bottom: 2px solid; padding-left:0;}
 .tmr { text-align:right !important; white-space:nowrap;}
 
 .flt-wrap { position:fixed; bottom:0; left:0; width:100%; text-align:center; z-index:400; background:linear-gradient(0deg, #000 30%, transparent 100%); padding:25px 0;}
-.pl-wk { padding:15px 45px; background: var(--grass-alt); color:#fff; font-size:20px; font-family:'Assistant'; border-radius:30px; font-weight:900; box-shadow:0 10px 30px rgba(0,0,0,0.6); border:none; outline:none; cursor:pointer; }
+.pl-wk { padding:15px 45px; background: var(--grass-alt); color:#fff; font-size:20px; font-family:'Assistant'; border-radius:30px; font-weight:900; letter-spacing:0.5px; box-shadow:0 10px 30px rgba(0,0,0,0.6); border:none; outline:none; cursor:pointer; border-top:2px solid rgba(255,255,255,0.4); transition: 0.2s;}
 .pl-wk:hover { background: #06b6d4; }
-.reboot { font-size: 12px; font-weight: bold; color:#777; position:absolute; bottom:5px; right:15px; cursor:pointer; }
+.reboot { font-size: 12px; font-weight: bold; color:#777; position:absolute; bottom:5px; right:15px; cursor:pointer; transition: 0.2s;}
 .reboot:hover { color: #f43f5e; text-decoration:underline; }
 
 #over { position:fixed; inset:0; background:rgba(2,6,23,0.96); z-index:900; overflow-y:auto; padding-top:40px; display:none; flex-direction:column; align-items:center;}
@@ -298,83 +350,75 @@ select.tct-sc { background:var(--p-panel); color:white; padding:10px 15px; font-
 </head>
 <body>
 
-<a href="/" class="arcade-btn">⮜ חזרה לארקייד הראשי (יציאה למרכז) </a>
-
-<!-- מסך פתיחה בחירת המועדון - בעברית מדויקת -->
-<div id="setup-screen" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
-   <div style="margin:auto 0; padding-bottom:50px;">
+<div id="setup-screen">
+   <div style="margin:auto; display:flex; flex-direction:column; min-height: 80vh; justify-content:center; align-items:center;">
         <h1 class="s-head">BORN FOR THE DUGOUT</h1>
-        <div class="s-sub">כדי לצאת לדרך כמאמן קבוצת בוגרים, אנא בחר איזה מועדון ברצונך לאמן בעונה הנוכחית:</div>
+        <div class="s-sub">כדי לצאת לדרך כמאמן ראשי, אנא בחר איזה מועדון ברצונך לאמן בעונה הנוכחית:</div>
         <div id="sel-render" class="grid-teams"></div>
    </div>
 </div>
 
-<!-- עמוד הקבוצה / ההנהלה / המשחקיות המלאה -->
 <div id="m-body" style="display:none;">
 
+    <a href="/" class="arcade-btn">⮜ חזרה לארקייד המשחקים</a>
+
     <div class="header-bar" id="bdrk">
-        <h2 class="hdr-title" id="dynN">-- טוען נתונים... --</h2>
+        <h2 class="hdr-title" id="dynN">-- טוען מערכת --</h2>
         <div class="budget-pod">€<span id="budget" style="color:var(--txt);">0</span></div>
     </div>
 
-    <!-- כפתורי התצוגה הברורים וההגיוניים -->
     <div class="tabs-tray">
-        <button class="tab-b active" onclick="goTab('vSqd', this)">סגל הקבוצה הקיים ⚽</button>
-        <button class="tab-b" onclick="goTab('vMkt', this)">שוק השחקנים להעברות 🔎</button>
-        <button class="tab-b" onclick="goTab('vTbl', this)">טבלת הליגה עד כה 📋</button>
+        <button class="tab-b active" onclick="goTab('vSqd', this)">סגל הקבוצה ⚽</button>
+        <button class="tab-b" onclick="goTab('vMkt', this)">שוק ההעברות 🔎</button>
+        <button class="tab-b" onclick="goTab('vTbl', this)">טבלת הליגה 📋</button>
     </div>
 
-    <!-- ניהול שחקנים הבית -->
     <div class="content-box active" id="vSqd">
          <select class="tct-sc" onchange="fireReq('api/formation',{formation:this.value}, false)">
-            <option value="4-4-2">טקטיקת מערך 4-4-2 : התבססות על שטח, הגנה יציבה עם קשרים מוכחים למגרש</option>
-            <option value="4-3-3">טקטיקת מערך 4-3-3 : מסירות לפול-בק לצד קוי ההתקפה ומשיכה אל קו השער.</option>
-            <option value="5-4-1">טקטיקת מערך 5-4-1 : הרתעה למזג הגנה מסוכם שמעריך למטה סיכונים ואש עליה</option>
+            <option value="4-4-2">מערך 4-4-2 : קלאסי ומאוזן מבחינה הגנתית והתקפית.</option>
+            <option value="4-3-3">מערך 4-3-3 : נטייה להתקפה חזקה וסיומת טובה ליד השער.</option>
+            <option value="5-4-1">מערך 5-4-1 : הרכבת 'בונקר' מוגן היטב כדי לצמצם חטיפות כדור.</option>
         </select>
         <div class="squad-g" id="r_sq"></div>
     </div>
     
-    <!-- פני חוק וניטור לחוד הקרבות - מקומך בעבורך קופון השבוי העדוני! -->
     <div class="content-box" id="vMkt">
         <div style="margin-bottom:20px; background: rgba(0,0,0,0.3); padding:10px 15px; border-left:4px solid #facc15; border-radius:5px; color:#94a3b8; font-size:14px; font-weight: bold;">
-            רשימות ספסל והוצעות חיכום לדור הפועלת הניהולי. השג קלפים מקצי תקן נגידים לפני התלכלו כל מתנדו מהכור הולץ לשחק תרוצתי קדם העבור... שילחון אליך! 
+            רשימת שוק פתוח. שחקנים זמינים לקניה. ההיצע ישתנה לקראת מחזור המשחק הבא!
         </div>
         <div class="squad-g" id="r_mkt"></div>
     </div>
     
     <div class="content-box" id="vTbl">
-        <div style="font-weight:bold; color:#cbd5e1; font-size:18px; margin-bottom:5px;"> סיכומי הצפי למגרשים הותמו ברצון..  #<span id="wwW"></span></div>
+        <div style="font-weight:bold; color:#cbd5e1; font-size:18px; margin-bottom:5px;"> מחזור ליגה משוחק:  #<span id="wwW"></span></div>
         <table class="tbl">
-             <thead><tr><th>מקום הקבוצה</th><th class="tmr">זהות מועדוניה בליגת האללופ</th><th>ניקוד מסוג</th><th>מחלק עבודש המותף!  </th><th>מודי משחק רכיבות השמיים (וואו - WIN))</th><th>פיטוריות ותקיעות ההפסד הריצוי קבע עורפני.. </th><th>עמושי רשומים קדיף למעודך פוס (נער משרו שריון  מדידים  +)</th></tr></thead>
+             <thead><tr><th>מיקום</th><th class="tmr">שם קבוצה</th><th>נק'</th><th>מש'</th><th>נצ'</th><th>הפס'</th><th>הפרש(+)</th></tr></thead>
              <tbody id="r_tbl"></tbody>
         </table>
     </div>
 
-    <!-- כפתורים עיקרייים נקים ביוט המחוהד לחזלי תמר שמתן!!  -->
     <div class="flt-wrap">
-        <button class="pl-wk" onclick="pDay(this)"> ▶️ הרץ לתוך הזמן את הפלאש הסימלצוטי כדור של היום פה!   </button>
-        <span class="reboot" onclick="reZ()">(נירמו צעודי שמתלף למעיכיו הדועפי וקבוע  ... 🗑️)</span>
+        <button class="pl-wk" onclick="pDay(this)"> ▶️ שחק את המשחק (הרצת המחזור) </button>
+        <span class="reboot" onclick="reZ()">(אתחל שמירה והתחל מחדש 🗑️)</span>
     </div>
 </div>
 
 <div id="over">
     <div style="max-width:600px; width:90%; border-bottom:1px solid #334155; padding-bottom:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-       <h1 style="color:#fff; font-family:'Oswald',sans-serif; letter-spacing:1px; margin:0;"> סיכמי תלוכת מחוזו מחזי הפלווי סגירות המחלפו הדמוז!! 🏆</h1>
-       <button style="background:var(--grass-alt); color:#fff; padding:10px 20px; font-size:16px; font-weight:bold; cursor:pointer; border:none; border-radius:30px;" onclick="oQ()"> השאירו נחמי לשלטי מצוק על משלח משותות מעגול... ⮞</button>
+       <h1 style="color:#fff; font-family:'Oswald',sans-serif; letter-spacing:1px; margin:0;">תוצאות משחקי השבוע: 🏆</h1>
+       <button style="background:var(--grass-alt); color:#fff; padding:10px 20px; font-size:16px; font-weight:bold; cursor:pointer; border:none; border-radius:30px;" onclick="oQ()">המשך בניהול המועדון  ⮞</button>
     </div>
     <div class="scr-p" id="pOverList"></div>
 </div>
 
 <script>
-// כאן פותרים כל בעיה נתובית שזרקו על שמיעה! API ברוט מתוחשש על כתפי המסנן. :
-function constructAPI() {
-   // מעקף דינמי למשחק יחיד שעובד דרך כתובות אקראיות - מגן 500 מלא
-   let bp = window.location.pathname; 
-   if(!bp.endsWith('/')) bp += '/';
-   return bp + 'api/';
+// מבנה API אוטומטי ונקי שתומך בראוטר מפוצל (Dispatcher) של הפרויקט ללא תלות
+function getApiUrl() {
+   let path = window.location.pathname; 
+   if(!path.endsWith('/')) path += '/';
+   return path;
 }
-
-const BASE = constructAPI();
+const API_URL = getApiUrl();
 
 function gEl(id){ return document.getElementById(id); }
 
@@ -386,37 +430,49 @@ function goTab(vid, btn) {
 }
 
 async function fireReq(epKey, payload={}, withLoad=true) {
-    let url = BASE + epKey;
-    let pms = {method: payload ? 'POST' : 'GET'}
-    if(payload && Object.keys(payload).length > 0){ 
-       pms.body = JSON.stringify(payload); 
-       pms.headers = {'Content-Type': 'application/json'} 
+    let endpoint = API_URL + epKey;
+    
+    // בדיקה נכונה לאובייקט POST מלא ובטוח כדי להימנע מבעיית json
+    let isPost = (payload && Object.keys(payload).length > 0);
+    
+    let reqConfig = {
+        method: isPost ? 'POST' : 'GET'
+    };
+
+    if (isPost) {
+        reqConfig.body = JSON.stringify(payload);
+        reqConfig.headers = { 'Content-Type': 'application/json' };
     }
-    let rx = await fetch(url, pms);
+
+    let rx = await fetch(endpoint, reqConfig);
     let rz = await rx.json();
-    if(rz.err) alert(rz.err); else if (rz.msg) alert(rz.msg);
-    if(withLoad) _runBld();
+    
+    if (rz.err) {
+        alert(rz.err); 
+    } else if (rz.msg) {
+        alert(rz.msg);
+    }
+    
+    if (withLoad) _runBld();
     return rz;
 }
 
-// נותח לחלוטין העורץ הג'יברישוטי במעגל פוט ורכב נעיפי למחירות הכדוטרוס! .. הנה משורטים ומיטבים !! 
 function RPlCard(p, mode="sell") {
     let ppClass = p.pos === "GK" ? "pl-pos-G" : "";
-    
-    let btnMsgCnf = "אישור סופי מבוסס מערכת לפני מסמף הרגשני: פני ענק לריעוט נחילי בסחט לקופה בשכר החופשי פונדה.. זה על חשבוון של 1M מחיר עמוד "+ (p.value).toLocaleString() +"€ קצנו נמשל קודש ? ";
-    let sellMsgCnf = "ימחוק שמתל פשוט עילוח קרשים דרוץ רמחת מצולר לאמון שיוזל עמד "+(p.value*0.75).toLocaleString() +"€  -  אמץ חנינו על הדפד??";
+    let btnMsgBuy = "האם אתה מאשר לשלם ולצרף את השחקן הזה למועדון על סך €" + (p.value).toLocaleString() + "?";
+    let btnMsgSell = "אתה עומד לשחרר את השחקן מקבוצתך תמורת 75% מעלותו: €" + (p.value*0.75).toLocaleString() + ". להמשיך?";
     
     let actBtn = mode === "buy" 
-        ? `<button class="fnc fnc-buy" onclick="if(confirm('${btnMsgCnf}')) fireReq('transfer', {action:'buy', player_id:'${p.id}'})">🛒 אגו משק קנויות!</button>`
-        : `<button class="fnc fnc-sell" onclick="if(confirm('${sellMsgCnf}')) fireReq('transfer', {action:'sell', player_id:'${p.id}'})">דף שחק מעבור למאב.</button>`;
+        ? `<button class="fnc fnc-buy" onclick="if(confirm('${btnMsgBuy}')) fireReq('api/transfer', {action:'buy', player_id:'${p.id}'})">🛒 קנה שחקן</button>`
+        : `<button class="fnc fnc-sell" onclick="if(confirm('${btnMsgSell}')) fireReq('api/transfer', {action:'sell', player_id:'${p.id}'})">💰 מכור (-25%)</button>`;
         
     return `
     <div class="pl-c">
         <div class="p-hdr"><div class="pl-pos ${ppClass}">${p.pos}</div></div>
         <div class="pl-name">${p.name}</div>
         <div class="stats-band">
-            <div class="stat-box" style="border-right:1px solid #1f2937;"><div class="st-L">עודמו של משאלו ההתפס שילחת ללוה</div><div class="st-V c-at">${p.att}</div></div>
-            <div class="stat-box"><div class="st-L">ספס שמר מועצר בלמו פגחי שלוש תדליק... !!</div><div class="st-V c-df">${p.deny}</div></div>
+            <div class="stat-box" style="border-right:1px solid #1f2937;"><div class="st-L">התקפה (ATT)</div><div class="st-V c-at">${p.att}</div></div>
+            <div class="stat-box"><div class="st-L">הגנה (DEF)</div><div class="st-V c-df">${p.deny}</div></div>
         </div>
         <div class="crd-foot"><div class="cr-pr">€ ${(p.value/1000000).toFixed(1)}M</div>${actBtn}</div>
     </div>`
@@ -424,15 +480,15 @@ function RPlCard(p, mode="sell") {
 
 function BldUi(data) {
    gEl('bdrk').style.borderBottomColor = data.my_team.col;
-   gEl('dynN').innerHTML = `⚽ ${data.my_team.name}` ;
+   gEl('dynN').innerHTML = `⚽ ${data.my_team.name}`;
    gEl('budget').innerText = data.my_team.budget.toLocaleString();
    gEl('wwW').innerText = data.week;
    
    document.querySelector('.tct-sc').value = data.my_team.formation;
    gEl('r_sq').innerHTML = data.my_team.squad.map(x=>RPlCard(x,"sell")).join('');
-   gEl('r_mkt').innerHTML= data.market.map(x=>RPlCard(x,"buy")).join('');
+   gEl('r_mkt').innerHTML = data.market.map(x=>RPlCard(x,"buy")).join('');
 
-   gEl('r_tbl').innerHTML= data.table.map(t=>`
+   gEl('r_tbl').innerHTML = data.table.map(t=>`
       <tr class="${t.name===data.my_team.name?'tr-my':''}">
           <td style="color:#64748b; font-weight:bold;">${t.pos}</td>
           <td class="tmr">${t.name}</td>
@@ -445,17 +501,17 @@ function BldUi(data) {
 }
 
 async function _runBld() {
-   let rt = await fetch(BASE + 'data'); 
+   let rt = await fetch(API_URL + 'api/data'); 
    let js = await rt.json();
    if(js.needs_setup) {
        gEl('setup-screen').style.display = 'flex';
        gEl('sel-render').innerHTML = js.teams_available.map(tc=>`
-           <div class="team-option" style="background: linear-gradient(135deg, ${tc.c1}, #121620); border-bottom-color: ${tc.c2};" onclick="fireReq('pick',{team_id:'${tc.id}'})">
+           <div class="team-option" style="background: linear-gradient(135deg, ${tc.c1}, #121620); border-bottom-color: ${tc.c2};" onclick="fireReq('api/pick_team',{team_id:'${tc.id}'})">
               <div class="t-crest-fake" style="color:${tc.c1}; background:${tc.c2}; border-color:${tc.c1}">${tc.name[0]}${tc.name[1]}</div><br>
               <span class="tm-name" style="color:${tc.c2}">${tc.name}</span>
            </div>
        `).join('');
-       gEl('m-body').style.display='none';
+       gEl('m-body').style.display = 'none';
    } else {
        gEl('setup-screen').style.display = 'none';
        gEl('m-body').style.display = 'block';
@@ -464,36 +520,41 @@ async function _runBld() {
 }
 
 async function pDay(btn) {
-   let rzTxt = btn.innerText;
-   btn.innerText = "פעמים יטלו סמל צירק הועברו ליפרו לטף יקצרות לחג.....  ..."; 
-   btn.style.opacity="0.7"; 
-   btn.disabled=true;
-   let ans = await fireReq('play', {}, false);
+   let originalBtnText = btn.innerText;
+   btn.innerText = "⏳ מריץ ומחשב נתוני סימולציה מהליגה, המתנו בבקשה..."; 
+   btn.style.opacity = "0.7"; 
+   btn.disabled = true;
+   
+   let ans = await fireReq('api/play', {}, false);
    
    let mdX = ans.findIndex(k => k.is_mine);
-   if(mdX>0){ let t=ans.splice(mdX,1)[0]; ans.unshift(t);}
+   if(mdX > 0) { 
+       let t = ans.splice(mdX,1)[0]; 
+       ans.unshift(t);
+   }
 
-   gEl('pOverList').innerHTML = ans.map(m=>{
+   gEl('pOverList').innerHTML = ans.map(m => {
       let bkC="rk-o"; 
       if(m.is_mine) { 
          let we_scored_t1 = (m.t1 === gEl('dynN').innerText.replace('⚽', '').trim());
          let we_scored_t2 = (m.t2 === gEl('dynN').innerText.replace('⚽', '').trim());
          let we_won = (we_scored_t1 && m.s1 > m.s2) || (we_scored_t2 && m.s2 > m.s1);
-         let we_lost= (we_scored_t1 && m.s1 < m.s2) || (we_scored_t2 && m.s2 < m.s1);
-         if(we_won) bkC='rk-my-w'; else if (we_lost) bkC='rk-my-l';
+         let we_lost = (we_scored_t1 && m.s1 < m.s2) || (we_scored_t2 && m.s2 < m.s1);
+         if(we_won) bkC = 'rk-my-w'; else if (we_lost) bkC = 'rk-my-l';
       }
-      let cLeft= m.c1.map(x=>`<div> ⚽ ${x} </div>`).join('');
-      let cRigt= m.c2.map(x=>`<div> ${x} ⚽ </div>`).join('');
+      
+      let cLeft = m.c1.map(x => `<div> ⚽ ${x} </div>`).join('');
+      let cRigt = m.c2.map(x => `<div> ${x} ⚽ </div>`).join('');
       
       return `
       <div class="rs-k ${bkC}">
           <div style="flex:1;">
-             <div class="rmb-n rmb-L" style="${m.s1>m.s2?'color:#fff':'color:#94a3b8'}">${m.t1}</div>
+             <div class="rmb-n rmb-L" style="${m.s1 > m.s2 ? 'color:#fff':'color:#94a3b8'}">${m.t1}</div>
              <div class="rstxt rstxt-L">${cLeft}</div>
           </div>
-          <div class="rsx" style="border-right:1px solid rgba(255,255,255,0.05); border-left:1px solid rgba(255,255,255,0.05)">${m.s1} : ${m.s2}</div>
+          <div class="rsx" style="border-right:1px solid rgba(255,255,255,0.05); border-left:1px solid rgba(255,255,255,0.05)">${m.s1} - ${m.s2}</div>
           <div style="flex:1;">
-             <div class="rmb-n rmb-R" style="${m.s2>m.s1?'color:#fff':'color:#94a3b8'}">${m.t2}</div>
+             <div class="rmb-n rmb-R" style="${m.s2 > m.s1 ? 'color:#fff':'color:#94a3b8'}">${m.t2}</div>
              <div class="rstxt rstxt-R">${cRigt}</div>
           </div>
       </div>`
@@ -501,16 +562,27 @@ async function pDay(btn) {
 
    gEl('over').style.display = 'flex';
    await _runBld(); 
-   btn.innerText = rzTxt; btn.style.opacity="1"; btn.disabled=false;
+   btn.innerText = originalBtnText; 
+   btn.style.opacity = "1"; 
+   btn.disabled = false;
 }
 
-function oQ() { gEl('over').style.display='none'; }
-function reZ(){ if(confirm('חוד חרופ המוחרי נגוסות מסנן לאבד טוחי התמשותי מצרי השלמצ ? 💀')) fireReq('restart'); }
+function oQ() { 
+    gEl('over').style.display = 'none'; 
+}
 
+function reZ(){ 
+    if(confirm('האם לאשר מחיקת פרופיל שחקן הליגה שלך? \nבמידה ותאשר כל העונה תימחק כליל לצמיתות והסגל הנוכחי ירד לטמיון.')) {
+        fireReq('api/restart');
+    }
+}
+
+// init loading!
 _runBld();
 </script>
 </body>
-</html>"""
+</html>
+"""
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
