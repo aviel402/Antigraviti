@@ -3,7 +3,7 @@ import uuid
 from flask import Flask, render_template_string, request, jsonify, session
 
 app = Flask(__name__)
-app.secret_key = 'fantasy_castle_defender_v1' 
+app.secret_key = 'fantasy_castle_defender_v2' 
 
 # ==========================================
 # 🏰 נתוני המבצר וחדרי ההגנה
@@ -16,7 +16,6 @@ SECTORS = {
     "CORE": {"name": "כס המלכות (הליבה)", "defense": 1000, "max_def": 1000} 
 }
 
-# חיות ורשעים חדשים ומגוונים! (הסוגים הקשים יופיעו בהמשך הימים)
 ALIENS = [
     {"name": "שלד לוחם", "dmg": 4, "hp_base": 15, "icon": "💀", "min_day": 1},
     {"name": "עדר זומבים", "dmg": 8, "hp_base": 30, "icon": "🧟", "min_day": 1},
@@ -51,7 +50,6 @@ class Engine:
         self.state["events"].append({"type": t, "room": room})
 
     def spawn_wave(self):
-        # מסנן איזה אויבים יכולים להגיע לפי היום במשחק
         available_monsters = [m for m in ALIENS if m["min_day"] <= self.state["day"]]
         count = random.randint(1, min(self.state["day"] // 2 + 1, 4)) 
         
@@ -59,14 +57,13 @@ class Engine:
             loc = random.choice(["N", "S", "E", "W"])
             base = random.choice(available_monsters)
             
-            # רוחות וזומבים יותר שכיחים, בוסים רק פעם ב...
             if base["name"] == "דרקון העצמות (בוס!)" and random.random() > 0.2:
-                 base = available_monsters[1] # הופך לזומבים במקום אם נכשל בהסתברות
+                 base = available_monsters[1] 
 
             enemy = {
                 "id": str(uuid.uuid4())[:8],
                 "name": base["name"],
-                "dmg": base["dmg"] + (self.state["day"] * 1), # מחמיר בעדינות עם הימים
+                "dmg": base["dmg"] + (self.state["day"] * 1), 
                 "hp": base["hp_base"] + (self.state["day"] * 4), 
                 "loc": loc,
                 "icon": base["icon"]
@@ -80,18 +77,17 @@ class Engine:
         s["events"] = [] 
         
         s["energy"] = min(s["energy"] + 15, s["max_energy"]) 
-        s["oxygen"] -= 1 # המורל יורד ממש לאט. קצב מלחמה.
+        s["oxygen"] -= 1 
         
         if s["oxygen"] <= 0:
             return "dead"
 
-        # אויבים תוקפים פאסיבית
         alive = []
         for e in s["enemies"]:
             loc = e["loc"]
             sec = s["sectors"][loc]
             
-            # חומה נופלת - הדרך לאולם כס המלכות פנויה
+            # פריצת חומות וכניסה לאולם הראשי
             if sec["defense"] <= 0 and loc != "CORE":
                 self.log(f"🚨 חומה נשברה! מפלצת צועדת אל כס המלכות.", "danger")
                 e["loc"] = "CORE"
@@ -103,12 +99,10 @@ class Engine:
             if s["sectors"]["CORE"]["defense"] <= 0:
                 return "dead"
             
-            # שומרים שיורים בחצים (פאסיבי מוריד 12 כח למפלצות)
             if s["sectors"][e["loc"]]["defense"] > 0 and e["loc"] != "CORE":
                 e["hp"] -= 12
                 if e["hp"] <= 0:
                      self.add_event("kill", e["loc"])
-                     # אבן נשמה מביאה טיפה מאנה על כל חיסול מהשומרים
                      s["energy"] = min(s["energy"] + 15, s["max_energy"])
             
             if e["hp"] > 0:
@@ -116,20 +110,18 @@ class Engine:
 
         s["enemies"] = alive
         
-        # זימון אויבים בהסתברות קלה ככל שהזמן עובר
         if random.random() < 0.25 + (s["day"] * 0.02):
             self.spawn_wave()
 
         return "ok"
 
-    def action_fire(self, loc): # ירי מטאורי מכס המלכות
+    def action_fire(self, loc): 
         if self.state["energy"] >= 20:
             self.state["energy"] -= 20
-            
             hits = False
             survivors = []
             base_damage = 50 
-            is_crit = random.random() < 0.3 # 30% לנזק קריטי פצצה!
+            is_crit = random.random() < 0.3 
             final_dmg = base_damage * 2.5 if is_crit else base_damage
             
             if is_crit:
@@ -144,7 +136,7 @@ class Engine:
                     if e["hp"] > 0: 
                         survivors.append(e)
                     else: 
-                        self.log(f"💥 אידייק! חיסלת בעזרת כישוף את {e['name']}.", "success")
+                        self.log(f"💥 בום! חיסלת בעזרת כישוף את {e['name']}.", "success")
                         self.state["energy"] = min(self.state["energy"] + 10, self.state["max_energy"])
                         self.add_event("kill", loc)
                 else:
@@ -156,7 +148,7 @@ class Engine:
         else:
             self.add_event("error")
 
-    def action_emp(self): # מטר אבנים מהשמיים (נשק כימות קבוצתי)
+    def action_emp(self): 
         if self.state["energy"] >= 80:
             self.state["energy"] -= 80
             self.add_event("emp")
@@ -168,7 +160,7 @@ class Engine:
             earned = (len(self.state["enemies"]) - len(alive)) * 10
             if earned > 0:
                 self.state["energy"] = min(self.state["energy"] + earned, self.state["max_energy"])
-                self.log(f"סופת מטאורים ריסקה שדות צורפים! +{earned} רווח למאנה.", "success")
+                self.log(f"סופת מטאורים ריסקה שדות צורפים! +{earned} מאנה.", "success")
             self.state["enemies"] = alive
         else:
              self.add_event("error")
@@ -178,22 +170,21 @@ class Engine:
             self.state["energy"] -= 20
             self.add_event("heal", loc)
             self.state["sectors"][loc]["defense"] = self.state["sectors"][loc]["max_def"] 
-            self.log("גולמים הקירות שוחזרו.", "sys")
+            self.log("בנאים וקוסמים הקימו את החומה מחדש.", "sys")
         else:
              self.add_event("error")
 
     def action_wait(self):
         self.state["energy"] = min(self.state["energy"] + 45, self.state["max_energy"]) 
         self.add_event("charge")
-        self.log("קריאת מגלות והכנה לשקר... (+45 קריסטלים למוני).", "sys")
+        self.log("מדיטציה עמוקה משקמת את רוח הקרב (+45 קריסטלים).", "sys")
 
-    def action_ventilate(self): # אווירה = הלחמה / שירות ללוחמים שיתנו למעלה שפיצה של מורל חירום 
+    def action_ventilate(self):  
         if self.state["energy"] >= 15:
             self.state["energy"] -= 15
             self.state["oxygen"] = min(self.state["oxygen"] + 50, 100) 
             self.add_event("air")
-            self.log("חרוץ החירוף והתרועממיות ! המורל בצבא זינק אל על.", "sys")
-
+            self.log("קריאת תקיפה! המורל בצבא זינק בחזרה.", "sys")
         else:
              self.add_event("error")
 
@@ -239,10 +230,9 @@ def update_game():
         session["game_cmd_fntasy"] = None 
         return jsonify({"dead": True, "day": eng.state["day"]})
 
-    # מכת העירבבבביום. ימות התרבצו בקפיצות של שכילי! 
     if random.random() < 0.15: 
         eng.state["day"] += 1
-        eng.log(f"גיל התזות מחשיך... המון מסוכנות צצות בסיבוב לגל : {eng.state['day']} !", "info")
+        eng.log(f"השמיים קודרים... השרצנו אל לגל קושי: מפלצות רמה {eng.state['day']} !", "info")
 
     session["game_cmd_fntasy"] = eng.state
     
@@ -287,7 +277,8 @@ HTML = """
     .emp-blast { animation: flash_emp 0.6s ease-out; }
     @keyframes flash_emp { 0% {background: white;} 50%{background: #8e44ad;} 100%{background: var(--bg);} }
 
-    .screen-shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both infinite; }
+    /* התיקון שלנו לרעידות: הוסר הinfinite כך שהיא תתרחש רק לחצי שנייה כשנקרא לה! */
+    .screen-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97); }
     @keyframes shake {
       10%, 90% { transform: translate3d(-1px, 0, 0); }
       20%, 80% { transform: translate3d(2px, 0, 0); }
@@ -327,7 +318,6 @@ HTML = """
         background-image: linear-gradient(to bottom, #2d2633 0%, #1e1921 100%);
     }
     
-    /* Hit animations for magic strikes */
     .hit-flash { animation: strike 0.4s forwards; }
     .hit-crit { animation: crit_strike 0.5s forwards; }
     @keyframes strike { 0% { background: #00d4ff; box-shadow: 0 0 30px #00d4ff;} 100% { background:var(--stone);} }
@@ -336,7 +326,6 @@ HTML = """
     .r-n { grid-area: N; }  .r-s { grid-area: S; }  
     .r-e { grid-area: E; }  .r-w { grid-area: W; } 
     
-    /* Throne room overrides */
     .r-c { grid-area: C; border-color: #f39c12; border-width: 4px; height: 155px; width: 195px; background: rgba(50,20,0,0.8); display:flex; flex-direction:column; justify-content:center; box-shadow: inset 0 0 40px rgba(0,0,0,0.8);}
     .king-icon {font-size:40px; text-shadow:0 0 20px #f1c40f; z-index:1; opacity: 0.9;}
 
@@ -349,7 +338,6 @@ HTML = """
     .enemy-pop { animation: floatEnemy 0.6s infinite alternate; }
     @keyframes floatEnemy {from{transform:translateY(0)}to{transform:translateY(4px)}}
 
-    /* Custom hp bars for Castle walls */
     .hp-strip { height: 10px; background: #000; margin-top: auto; margin-bottom: 5px; border-radius:3px; border:1px solid #444;}
     .hp-val { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s;}
     
@@ -372,17 +360,14 @@ HTML = """
     .float-text { position: absolute; font-size: 24px; font-family:'sans-serif'; font-weight:900; animation: floatUp 1.2s forwards; pointer-events: none; text-shadow:2px 2px 2px #000; z-index: 100; left:40%;}
     @keyframes floatUp { 0%{ transform:translateY(0) scale(1.5); opacity:1;} 100%{transform:translateY(-60px) scale(1); opacity:0;} }
 
-    /* The Controls / Logs section */
     .bottom-panel { height: 180px; background: #0b0710; border-top: 3px solid #5a3070; display: grid; grid-template-columns: 2fr 1.5fr;}
     
-    /* Cool Logs Panel */
     .logs { padding: 15px; overflow-y: auto; font-size: 14px; border-left: 2px solid #5a3070; background:rgba(0,0,0,0.5); display:flex; flex-direction: column-reverse; }
     .log-line { margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dotted rgba(255,255,255,0.05); color:#a9a1af;}
     .log-line:first-child { color:#e5c468; font-weight:bold; }
     
     .sys-controls { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items:center; }
     
-    /* Bottom big buttons styling */
     .big-btn { padding: 15px; border: 2px solid; border-radius:6px; font-family: inherit; font-size:14px; cursor: pointer; font-weight:bold;}
     
     .charge-btn { background:#1f1326; color: var(--mana); border-color:var(--mana); grid-column:span 2;}
@@ -480,7 +465,6 @@ HTML = """
 </div>
 
 <script>
-    // פעלולים של הדפדפן להשלמת קוביד המפלצות
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const ctx = new AudioCtx();
     
@@ -489,7 +473,7 @@ HTML = """
         let osc = ctx.createOscillator(); let gain = ctx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        if (pitchShift) osc.frequency.exponentialRampToValueAtTime(freq*0.2, ctx.currentTime+time); // צליל יורד לפגיעות עמוקות במאגיה.
+        if (pitchShift) osc.frequency.exponentialRampToValueAtTime(freq*0.2, ctx.currentTime+time); 
         gain.gain.setValueAtTime(0.2, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + time);
         
@@ -498,11 +482,11 @@ HTML = """
     }
     
     const SFX = {
-        magic_hit: () => beep('triangle', 600, 0.4, true),         // סאונד מטאור כישוף שיורה אבק   
-        crit: () => beep('sawtooth', 300, 0.7, true),              // סמייט עצבני מאוד מתנדף קול בארומטי.
-        build: () => {beep('square', 100, 0.2); setTimeout(()=>beep('square',150,0.1),100)},  // הקישים של חישרוד
+        magic_hit: () => beep('triangle', 600, 0.4, true),         
+        crit: () => beep('sawtooth', 300, 0.7, true),              
+        build: () => {beep('square', 100, 0.2); setTimeout(()=>beep('square',150,0.1),100)}, 
         heal_morale: () => beep('sine', 400, 0.6),    
-        win_mana: () => beep('sine', 1200, 0.2) // בלינק כשמקבלים טיפה נשמה ליצור קסם אבו  
+        win_mana: () => beep('sine', 1200, 0.2) 
     };
 
     const API = "update"; 
@@ -519,51 +503,56 @@ HTML = """
             let d = await res.json();
 
             if (d.dead) {
+                // הרעד בזמן פטירה מוסיף טיפת אלמנט אפוקליפטי
                 document.body.classList.add("screen-shake"); 
                 beep('sawtooth', 80, 2, true);
-                setTimeout(() => { alert("🏰 הכסא נפל! חוד הזומבים הפך את עצמותייך לכסא הבא! פוססנו ביום " + d.day); location.reload();}, 800);
+                setTimeout(() => { alert("🏰 הכסא נפל! חיל הזומבים הפך את עצמותייך לכסא הבא! מתת ביום ה- " + d.day); location.reload();}, 800);
                 return;
             }
 
-            // Upate HUD  ====== 
+            // === התיקון השני: עדכון החלק העליון המבריק (הכס והיום) ====== 
             document.getElementById('txt-en').innerText = d.stats.energy;
             document.getElementById('bar-en').style.width = Math.min((d.stats.energy / 250)*100,100) + "%"; 
             document.getElementById('bar-ox').style.width = d.stats.oxy + "%"; 
             document.getElementById('txt-ox').innerText = d.stats.oxy + "%"; 
             
-            // תזמורי ויזואלית שחיי המלחמות ביגש! צלילה בהנפות הליבה במיטבת. 
+            // תיוג תיבת הימים בנתונים העדכניים:
+            document.getElementById('day-val').innerText = d.stats.day;
+            document.getElementById('txt-core').innerText = d.stats.core;
+            
+            // התיקון הראשון: רעידת הליבה קצרצרה בלבד כאשר מתבצע שינוי במינוס המלך 
             if (d.stats.core < previousCoreDefense) {
-                document.body.classList.remove("screen-shake"); void document.body.offsetWidth; document.body.classList.add("screen-shake");
+                document.body.classList.remove("screen-shake"); 
+                void document.body.offsetWidth; 
+                document.body.classList.add("screen-shake");
             }
             previousCoreDefense = d.stats.core; 
             
-            // מטפל באירועים מהסרבר (הצגת עפעי פייט אגדה ויזוילא) :
+            
             if (d.events && d.events.length > 0) {
                 d.events.forEach(ev => {
                     let roomEl = document.getElementById("room-" + ev.room);
                     if (ev.type === "emp") { document.body.classList.add("emp-blast"); setTimeout(()=>document.body.classList.remove("emp-blast"),600); beep('square',200, 1.2, true);}
                     if (ev.type === "charge") beep('sine',300, 0.8);
-                    if (ev.type === "air") SFX.heal_morale(); // השעאת תקיפים שגריר לחצרן האצולה אליו גועשו
+                    if (ev.type === "air") SFX.heal_morale(); 
                     if (ev.room) {
                         if (ev.type === "shoot") { SFX.magic_hit(); roomEl.classList.remove("hit-flash"); void roomEl.offsetWidth; roomEl.classList.add("hit-flash"); spawnTextFloat("-50💥", ev.room, "cyan"); }
                         if (ev.type === "crit_shoot") { SFX.crit(); roomEl.classList.remove("hit-crit"); void roomEl.offsetWidth; roomEl.classList.add("hit-crit"); spawnTextFloat("-CRIT-", ev.room, "gold"); }
                         if (ev.type === "heal") { SFX.build(); spawnTextFloat("+מגן אבנים", ev.room, "gray"); }
                         if (ev.type === "kill") { SFX.win_mana(); spawnTextFloat("+💎", ev.room, "cyan"); }
-                        if (ev.type === "alarm" || ev.type==="breach") { beep('sawtooth', 150, 0.3); } // איים הבוסי תרצה ששעטים לקלל המפקדה אל שוותה הקפיצ !
+                        if (ev.type === "alarm" || ev.type==="breach") { beep('sawtooth', 150, 0.3); } 
                     }
                 });
             }
 
-            // יחולול מחודש חיל ולוחות מול האגנפים למפות ציינרים המיקום ! ==== 
             const dirs = ['N','S','E','W', 'CORE'];
             dirs.forEach(k => document.getElementById(`aliens-${k}`).innerHTML = ''); 
 
             d.enemies.forEach(e => {
                 let theDiv = document.getElementById(`aliens-${e.loc}`);
-                if (theDiv) {  theDiv.innerHTML += `<span class="enemy-pop" title="תזונש ימי המחירי המולא : פתא ${e.hp} שומשמות !">${e.icon}</span>`; }
+                if (theDiv) {  theDiv.innerHTML += `<span class="enemy-pop" title="מופל חיים: ${e.hp} !">${e.icon}</span>`; }
             });
 
-            // פתאום הבלים לא צועני החקלה   ==== 
             for (let k in d.sectors) {
                 let sec = d.sectors[k];
                 let elHp = document.getElementById("hp-"+k);
@@ -571,20 +560,28 @@ HTML = """
                 
                 if(elHp) elHp.style.width = pct + "%";
                 let roomEl = document.getElementById("room-"+k);
+                
+                // שימו לב! כשמשפצים חומה ההופכי יעבוד בזכות השורות האלה (יוריד השקפה ומחלה מהחלונות!)
                 if (pct < 30 && pct > 0) {
                      if(k!=="CORE") elHp.style.backgroundColor = "var(--blood)"; else elHp.style.backgroundColor = "orange";
                      roomEl.classList.add("danger-glow");
+                     roomEl.style.opacity = "1";
+                     roomEl.style.filter = "none";
                 } 
                 else if(pct <= 0) { 
-                    elHp.style.backgroundColor = "transparent"; roomEl.style.opacity = "0.5"; roomEl.style.filter = "grayscale(100%)"; roomEl.classList.remove("danger-glow");
+                    elHp.style.backgroundColor = "transparent"; 
+                    roomEl.style.opacity = "0.4"; 
+                    roomEl.style.filter = "grayscale(100%)"; 
+                    roomEl.classList.remove("danger-glow");
                 }
                 else {
                     elHp.style.backgroundColor = "#2ecc71";
-                    roomEl.style.opacity = "1"; roomEl.style.filter = "none"; roomEl.classList.remove("danger-glow");
+                    roomEl.style.opacity = "1"; 
+                    roomEl.style.filter = "none"; 
+                    roomEl.classList.remove("danger-glow");
                 }
             }
 
-            // Log output text magic display format reverse.   ==== 
             let lb = document.getElementById("logbox");
             lb.innerHTML = "";
             let latests = d.log.reverse(); 
@@ -596,7 +593,6 @@ HTML = """
     }
 
 
-    // הפצה מספרים ויורח על המסמך סילובציה.
     function spawnTextFloat(txt, roomId, color) {
         let theDiv = document.getElementById("room-" + roomId);
         if(!theDiv) return;
@@ -611,8 +607,9 @@ HTML = """
     window.onload = () => { act('init'); };
 </script>
 </body>
-</html>
-"""
+</html>"""
 
 if __name__ == "__main__":
+    # כמובן, אם זה מאחורי הלאונצ'ר, הוא לא ישתמש ב-5007 אלא בניתוב הראשי,
+    # אבל לשם הפעלה בודדת לבדיקה:
     app.run(port=5007, debug=True)
