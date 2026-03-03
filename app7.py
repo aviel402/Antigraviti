@@ -1,43 +1,45 @@
 import random
 import uuid
-from flask import Flask, render_template_string, request, jsonify, session, url_for
+from flask import Flask, render_template_string, request, jsonify, session
 
-# נניח שזה app7 בתשתית שלך (PROXIMA)
 app = Flask(__name__)
-app.secret_key = 'hebrew_commander_full_fix_v12' 
+app.secret_key = 'fantasy_castle_defender_v1' 
 
 # ==========================================
-# 🛰️ נתוני התחנה והאויבים עם הופעה ויזואלית
+# 🏰 נתוני המבצר וחדרי ההגנה
 # ==========================================
-
 SECTORS = {
-    "N": {"name": "האנגר צפוני", "defense": 100, "max_def": 100},
-    "S": {"name": "כור דרומי",   "defense": 100, "max_def": 100},
-    "E": {"name": "מעבדות מזרח", "defense": 100, "max_def": 100},
-    "W": {"name": "נשקייה מערב", "defense": 100, "max_def": 100},
-    "CORE": {"name": "ליבת הפיקוד", "defense": 1000, "max_def": 1000} 
+    "N": {"name": "השער הצפוני", "defense": 100, "max_def": 100},
+    "S": {"name": "החפיר הדרומי", "defense": 100, "max_def": 100},
+    "E": {"name": "צריח הקוסמים", "defense": 100, "max_def": 100},
+    "W": {"name": "חומת הפלדה", "defense": 100, "max_def": 100},
+    "CORE": {"name": "כס המלכות (הליבה)", "defense": 1000, "max_def": 1000} 
 }
 
-# הוספתי "icon" לאפיון הויזואלי במסך השליטה!
+# חיות ורשעים חדשים ומגוונים! (הסוגים הקשים יופיעו בהמשך הימים)
 ALIENS = [
-    {"name": "רחפן עוקץ", "dmg": 5, "speed": 1, "icon": "🛸"},
-    {"name": "משחית כבד", "dmg": 15, "speed": 2, "icon": "👾"},
-    {"name": "מלכת הכוורת", "dmg": 30, "speed": 1, "icon": "🦂"}
+    {"name": "שלד לוחם", "dmg": 4, "hp_base": 15, "icon": "💀", "min_day": 1},
+    {"name": "עדר זומבים", "dmg": 8, "hp_base": 30, "icon": "🧟", "min_day": 1},
+    {"name": "כלב-גיהינום", "dmg": 15, "hp_base": 25, "icon": "🐺", "min_day": 2},
+    {"name": "רוח רפאים", "dmg": 22, "hp_base": 20, "icon": "👻", "min_day": 3},
+    {"name": "נקרומנסר (מזמן מתים)", "dmg": 18, "hp_base": 60, "icon": "🧙‍♂️", "min_day": 4},
+    {"name": "דרקון העצמות (בוס!)", "dmg": 40, "hp_base": 120, "icon": "🐉", "min_day": 6}
 ]
 
 # ==========================================
-# ⚙️ מנוע המשחק
+# ⚙️ מנוע כישוף המשחק
 # ==========================================
 class Engine:
     def __init__(self, state=None):
         if not state:
             self.state = {
-                "energy": 100, "max_energy": 100,
-                "oxygen": 100, "max_oxygen": 100,
+                "energy": 100, "max_energy": 250, # המאנה הכחולה
+                "oxygen": 100, "max_oxygen": 100, # מורל הצבא
                 "day": 1,
                 "sectors": SECTORS.copy(),
                 "enemies": [],
-                "log": [{"text": "התחנה חוברה מחדש. חיישני התנועה פעילים.", "type": "sys"}]
+                "log": [{"text": "התפלצויות באופק. כוננות מבצר עליונה החלה!", "type": "info"}],
+                "events": []
             }
         else:
             self.state = state
@@ -45,144 +47,169 @@ class Engine:
     def log(self, t, type="sys"): 
         self.state["log"].append({"text": t, "type": type})
 
+    def add_event(self, t, room=None):
+        self.state["events"].append({"type": t, "room": room})
+
     def spawn_wave(self):
-        count = random.randint(1, min(self.state["day"], 4)) # מקסימום 4 מפלצות מוגרלות
+        # מסנן איזה אויבים יכולים להגיע לפי היום במשחק
+        available_monsters = [m for m in ALIENS if m["min_day"] <= self.state["day"]]
+        count = random.randint(1, min(self.state["day"] // 2 + 1, 4)) 
+        
         for _ in range(count):
             loc = random.choice(["N", "S", "E", "W"])
-            base = random.choice(ALIENS)
+            base = random.choice(available_monsters)
+            
+            # רוחות וזומבים יותר שכיחים, בוסים רק פעם ב...
+            if base["name"] == "דרקון העצמות (בוס!)" and random.random() > 0.2:
+                 base = available_monsters[1] # הופך לזומבים במקום אם נכשל בהסתברות
+
             enemy = {
                 "id": str(uuid.uuid4())[:8],
                 "name": base["name"],
-                "dmg": base["dmg"],
-                "hp": 20 + (self.state["day"] * 5),
+                "dmg": base["dmg"] + (self.state["day"] * 1), # מחמיר בעדינות עם הימים
+                "hp": base["hp_base"] + (self.state["day"] * 4), 
                 "loc": loc,
                 "icon": base["icon"]
             }
             self.state["enemies"].append(enemy)
-            sector_name = self.state["sectors"][loc]["name"]
-            self.log(f"⚠️ איום חדש: {enemy['name']} הופיע ב-{sector_name}!", "danger")
+            self.log(f"⚔️ תצפית חומות: {enemy['name']} תוקף מ{SECTORS[loc]['name']}.", "danger")
+            self.add_event("alarm", loc)
 
     def next_turn(self):
         s = self.state
-        s["energy"] = min(s["energy"] + 15, s["max_energy"])  # שופר מעט לתת חופש פעולה
-        s["oxygen"] -= 4
+        s["events"] = [] 
+        
+        s["energy"] = min(s["energy"] + 15, s["max_energy"]) 
+        s["oxygen"] -= 1 # המורל יורד ממש לאט. קצב מלחמה.
         
         if s["oxygen"] <= 0:
-            self.log("❌ אזל החמצן לחלוטין. התחנה נכנעה לריק.", "danger")
             return "dead"
 
-        # אויבים תוקפים
+        # אויבים תוקפים פאסיבית
         alive = []
         for e in s["enemies"]:
             loc = e["loc"]
             sec = s["sectors"][loc]
             
-            # אם החדר נפרץ (הגנה 0) - האויב מתקדם לליבה
+            # חומה נופלת - הדרך לאולם כס המלכות פנויה
             if sec["defense"] <= 0 and loc != "CORE":
-                self.log(f"🚨 שער {sec['name']} נפרץ! פולשים מתקדמים לליבה.", "danger")
+                self.log(f"🚨 חומה נשברה! מפלצת צועדת אל כס המלכות.", "danger")
                 e["loc"] = "CORE"
                 sec["defense"] = 0
+                self.add_event("breach", "CORE")
             
-            # נזק לחדר הנוכחי (או לליבה)
-            target = s["sectors"][e["loc"]]
-            target["defense"] -= e["dmg"]
+            s["sectors"][e["loc"]]["defense"] -= e["dmg"]
             
-            # מערכת הגנה פסיבית גורמת נזק קל לאויבים השוהים בחדרים מבצעיים (לא בליבה)
-            if target["defense"] > 0 and e["loc"] != "CORE":
-                e["hp"] -= 5 
-            
-            if target["defense"] <= 0 and e["loc"] == "CORE":
+            if s["sectors"]["CORE"]["defense"] <= 0:
                 return "dead"
+            
+            # שומרים שיורים בחצים (פאסיבי מוריד 12 כח למפלצות)
+            if s["sectors"][e["loc"]]["defense"] > 0 and e["loc"] != "CORE":
+                e["hp"] -= 12
+                if e["hp"] <= 0:
+                     self.add_event("kill", e["loc"])
+                     # אבן נשמה מביאה טיפה מאנה על כל חיסול מהשומרים
+                     s["energy"] = min(s["energy"] + 15, s["max_energy"])
             
             if e["hp"] > 0:
                 alive.append(e)
-            else:
-                self.log(f"🔫 ההגנה האוטומטית טיפלה ב-{e['name']}.", "sys")
 
         s["enemies"] = alive
         
-        # סיכוי לגל חדש (קשוח יותר ככל שמתקדמים בימים)
-        if random.random() < 0.35 + (s["day"] * 0.05):
+        # זימון אויבים בהסתברות קלה ככל שהזמן עובר
+        if random.random() < 0.25 + (s["day"] * 0.02):
             self.spawn_wave()
 
         return "ok"
 
-    def action_fire(self, loc):
-        if self.state["energy"] >= 25:
-            self.state["energy"] -= 25
-            hits = 0
+    def action_fire(self, loc): # ירי מטאורי מכס המלכות
+        if self.state["energy"] >= 20:
+            self.state["energy"] -= 20
+            
+            hits = False
             survivors = []
+            base_damage = 50 
+            is_crit = random.random() < 0.3 # 30% לנזק קריטי פצצה!
+            final_dmg = base_damage * 2.5 if is_crit else base_damage
+            
+            if is_crit:
+                self.add_event("crit_shoot", loc)
+            else:
+                self.add_event("shoot", loc)
+
             for e in self.state["enemies"]:
                 if e["loc"] == loc:
-                    e["hp"] -= 40 # כח תקיפה רגיל
-                    hits += 1
+                    e["hp"] -= final_dmg
+                    hits = True
                     if e["hp"] > 0: 
                         survivors.append(e)
                     else: 
-                        self.log(f"🎯 ירי מדויק השמיד את {e['name']}!", "success")
+                        self.log(f"💥 אידייק! חיסלת בעזרת כישוף את {e['name']}.", "success")
+                        self.state["energy"] = min(self.state["energy"] + 10, self.state["max_energy"])
+                        self.add_event("kill", loc)
                 else:
                     survivors.append(e)
-            self.state["enemies"] = survivors
             
-            sec_name = self.state["sectors"][loc]["name"]
-            if hits == 0: self.log(f"ירית באגף {sec_name} על אזור ריק. שטח נקי.", "sys")
+            self.state["enemies"] = survivors
+            if not hits:
+                self.log("כישוף מבוזבז באזור ריק.", "sys")
         else:
-            self.log("⚡ לא ניתן לבצע תקיפה! יש צורך ב-25 חשמל.", "danger")
+            self.add_event("error")
 
-    # 🔥 נשק יום הדין
-    def action_emp(self):
+    def action_emp(self): # מטר אבנים מהשמיים (נשק כימות קבוצתי)
         if self.state["energy"] >= 80:
             self.state["energy"] -= 80
-            survivors = []
+            self.add_event("emp")
+            alive = []
             for e in self.state["enemies"]:
-                e["hp"] -= 50
-                if e["hp"] > 0: survivors.append(e)
+                e["hp"] -= 120 
+                if e["hp"] > 0: alive.append(e)
             
-            if len(self.state["enemies"]) > len(survivors):
-                self.log(f"💥 גל EMP רב עוצמה ריסק מספר אויבים בכל התחנה!", "success")
-            else:
-                self.log(f"💥 גל ה-EMP פגע בכולם והחליש את הרגישויות שלהם.", "info")
-            self.state["enemies"] = survivors
+            earned = (len(self.state["enemies"]) - len(alive)) * 10
+            if earned > 0:
+                self.state["energy"] = min(self.state["energy"] + earned, self.state["max_energy"])
+                self.log(f"סופת מטאורים ריסקה שדות צורפים! +{earned} רווח למאנה.", "success")
+            self.state["enemies"] = alive
         else:
-            self.log("⚡ סירנות! אנרגיית רשת ל-EMP נמוכה! דרושים 80 כוח.", "danger")
-
+             self.add_event("error")
 
     def action_repair(self, loc):
         if self.state["energy"] >= 20:
             self.state["energy"] -= 20
-            # מוסיף הגנה לחדר
-            target = self.state["sectors"][loc]
-            target["defense"] = min(target["defense"] + 60, target["max_def"])
-            self.log(f"🔧 חוליות חירום ביצרו את ה-{target['name']}.", "info")
+            self.add_event("heal", loc)
+            self.state["sectors"][loc]["defense"] = self.state["sectors"][loc]["max_def"] 
+            self.log("גולמים הקירות שוחזרו.", "sys")
         else:
-            self.log("⚡ חסרה אנרגיה למערכות התיקון! (20 נדרש)", "danger")
-
-    def action_ventilate(self):
-        if self.state["energy"] >= 30:
-            self.state["energy"] -= 30
-            self.state["oxygen"] = min(self.state["oxygen"] + 45, 100)
-            self.log("💨 שאיבת אוויר בוצעה: אספקת חמצן רעננה להמשך הליבה.", "success")
-        else:
-            self.log("⚡ מנועי האוויר משותקים, אין חשמל (30 דרוש).", "danger")
+             self.add_event("error")
 
     def action_wait(self):
-        self.log("⏳ כוננות צבירה מופעלת... מחוללי מתח מטעינים המון אנרגיה.", "info")
+        self.state["energy"] = min(self.state["energy"] + 45, self.state["max_energy"]) 
+        self.add_event("charge")
+        self.log("קריאת מגלות והכנה לשקר... (+45 קריסטלים למוני).", "sys")
 
+    def action_ventilate(self): # אווירה = הלחמה / שירות ללוחמים שיתנו למעלה שפיצה של מורל חירום 
+        if self.state["energy"] >= 15:
+            self.state["energy"] -= 15
+            self.state["oxygen"] = min(self.state["oxygen"] + 50, 100) 
+            self.add_event("air")
+            self.log("חרוץ החירוף והתרועממיות ! המורל בצבא זינק אל על.", "sys")
+
+        else:
+             self.add_event("error")
 
 # ==========================================
-# SERVER API (מתואם לחנות הארקיד שלך!)
+# SERVER API
 # ==========================================
 @app.route("/")
 def index():
     if "uid" not in session: session["uid"] = str(uuid.uuid4())
     return render_template_string(HTML)
 
-# הכתובת היא כעת רק 'update' עבור Dispatcher Middleware יחסית 
 @app.route("/update", methods=["POST"])
 def update_game():
     d = request.json
     try: 
-        eng = Engine(session.get("game_cmd_prox"))
+        eng = Engine(session.get("game_cmd_fntasy"))
     except: 
         eng = Engine(None)
 
@@ -191,8 +218,7 @@ def update_game():
 
     status = "ok"
 
-    if act == "reset":
-        eng = Engine(None)
+    if act == "reset": eng = Engine(None)
     elif act == "fire":
         eng.action_fire(target)
         status = eng.next_turn()
@@ -204,29 +230,21 @@ def update_game():
         status = eng.next_turn()
     elif act == "wait":
         eng.action_wait()
-        # בוסט לאנרגיה מוגבר במתנה בטוחה:
-        eng.state["energy"] = min(eng.state["energy"] + 15, eng.state["max_energy"]) 
         status = eng.next_turn()
     elif act == "emp":
         eng.action_emp()
         status = eng.next_turn()
 
-    # יצירת מרווח זמן לשחקן לנשום בתור ה1 הראשון
-    if act == "init" and eng.state["day"] == 1 and not eng.state["enemies"]:
-        pass # לא עושים כלום ב-init, רק שולבים UI
-
-    # דיווח הפסד נקי למשחקון
     if status == "dead":
-        session["game_cmd_prox"] = None # איפוס לאחר מוות
+        session["game_cmd_fntasy"] = None 
         return jsonify({"dead": True, "day": eng.state["day"]})
 
-    # קידום "לילה לחצי לילה" ימי המשחק
+    # מכת העירבבבביום. ימות התרבצו בקפיצות של שכילי! 
     if random.random() < 0.15: 
         eng.state["day"] += 1
-        eng.log(f"☀️ שחר זורח. סיום סימולציה מחזור {eng.state['day']-1}, רמת הסכנה עלתה!", "danger")
+        eng.log(f"גיל התזות מחשיך... המון מסוכנות צצות בסיבוב לגל : {eng.state['day']} !", "info")
 
-    # שימור מצב
-    session["game_cmd_prox"] = eng.state
+    session["game_cmd_fntasy"] = eng.state
     
     return jsonify({
         "stats": {
@@ -236,13 +254,14 @@ def update_game():
             "core": eng.state["sectors"]["CORE"]["defense"]
         },
         "sectors": eng.state["sectors"],
-        "enemies": eng.state["enemies"],  # <<< זהו הסוד הגדול שעובר כעת לדפדפן להציג אוייבים!
-        "log": eng.state["log"][-20:] # חותכים את אורך הטקסט שהלוג מראה כדי לא לשקולט שרת 
+        "enemies": eng.state["enemies"], 
+        "events": eng.state["events"],  
+        "log": eng.state["log"][-10:] 
     })
 
 
 # ==========================================
-# FRONTEND - המסך הטקטי! 
+# FRONTEND - Dark Fantasy UI
 # ==========================================
 HTML = """
 <!DOCTYPE html>
@@ -250,211 +269,247 @@ HTML = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROXIMA STATION - COMMANDER</title>
+<title>SHADOW KINGDOM</title>
 <style>
-    :root { --main: #00f3ff; --alert: #ff004c; --bg: #07090f; }
+    @import url('https://fonts.googleapis.com/css2?family=Secular+One&display=swap');
     
-    body { background: var(--bg); color: var(--main); font-family: monospace; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow:hidden;}
+    :root { 
+        --mana: #00d4ff; 
+        --mana-dark: #005a7f;
+        --blood: #e74c3c;
+        --bg: #0d0614; 
+        --stone: #2a2533;
+        --border-glow: rgba(142, 68, 173, 0.6);
+    }
     
-    /* המסך רועד כשהחיים בסכנה */
-    .screen-shake { animation: shake 0.5s; }
+    body { background: var(--bg); color: #ecf0f1; font-family: 'Secular One', sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow:hidden;}
+    
+    .emp-blast { animation: flash_emp 0.6s ease-out; }
+    @keyframes flash_emp { 0% {background: white;} 50%{background: #8e44ad;} 100%{background: var(--bg);} }
+
+    .screen-shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both infinite; }
     @keyframes shake {
-      0% { transform: translate(1px, 1px) rotate(0deg); }
-      10% { transform: translate(-1px, -2px) rotate(-1deg); }
-      30% { transform: translate(3px, 2px) rotate(0deg); }
-      50% { transform: translate(-1px, -1px) rotate(1deg); }
-      100% { transform: translate(0, 0) rotate(0deg); }
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, -1px, 0); }
+      40%, 60% { transform: translate3d(4px, 1px, 0); }
     }
     
-    /* מזהיר על סוף עולם החמצן - אדמומיות באוויר */
-    body.low-oxygen::before {
-        content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: radial-gradient(circle, transparent 30%, rgba(255, 0, 50, 0.4) 100%);
-        pointer-events: none; z-index: 1000; animation: blink_danger 2s infinite;
-    }
-    
-    /* חלוקת לוחות הבקרה העליון */
+    /* Top Menu HUD */
     .hud { 
-        background: #0d121c; padding: 15px; border-bottom: 2px solid var(--main); 
-        display: flex; justify-content: space-between; align-items: center;
-        box-shadow: 0 0 30px rgba(0, 243, 255, 0.15); z-index: 10;
+        background: #140924; padding: 10px 15px; border-bottom: 3px solid #8e44ad; 
+        display: flex; justify-content: space-between; align-items: center; z-index: 10;
+        box-shadow: 0 5px 20px rgba(142,68,173,0.3);
     }
-    .bar-box { width: 130px; text-align: center; font-size: 15px; font-weight: bold;}
-    .bar { height: 14px; background: #222; margin-top: 5px; border:1px solid #444; border-radius:3px; overflow:hidden;}
-    .fill { height: 100%; transition: width 0.3s; width: 100%; }
     
-    .hud-title {text-align:center;}
-    
-    /* MAP - GRID התחנה עצמה */
+    .bar-box { width: 140px; text-align: center; font-size: 15px; }
+    .bar { height: 16px; background: #1a1a1a; margin-top: 5px; border:2px solid #555; border-radius:5px; position:relative;}
+    .fill { height: 100%; transition: width 0.3s; width: 100%; border-radius:3px; }
+    .hud-title h2 {margin:0; font-size: 32px; background: -webkit-linear-gradient(#d2b4de, #8e44ad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform:uppercase;}
+    .hud-title div { background:#1a0822; padding:3px 10px; border-radius:20px; font-size:14px; margin-top:5px; border:1px solid #4a235a;}
+
+    /* THE CASTLE BOARD */
     .station { 
         flex: 1; display: grid; position: relative;
         grid-template-areas: 
             ". N ."
             "W C E"
             ". S .";
-        gap: 20px; align-items: center; justify-content: center;
-        background: radial-gradient(ellipse at center, #111a28 0%, var(--bg) 80%);
+        gap: 25px; align-items: center; justify-content: center;
+        background: radial-gradient(circle at center, #1e0d33 0%, var(--bg) 95%);
     }
     
     .room {
-        width: 150px; height: 120px;
-        background: rgba(10,25,45,0.85); border: 2px solid #23426e; border-radius: 8px;
-        display: flex; flex-direction: column; justify-content: space-between; padding: 10px;
-        text-align: center; transition: all 0.3s; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        width: 175px; height: 140px;
+        background: var(--stone); border: 2px solid #5d4037; border-radius: 4px;
+        display: flex; flex-direction: column; justify-content: space-between; padding: 8px;
+        text-align: center; position: relative; box-shadow: 5px 5px 10px rgba(0,0,0,0.8);
+        background-image: linear-gradient(to bottom, #2d2633 0%, #1e1921 100%);
     }
-    .room:hover { border-color: var(--main); box-shadow: 0 0 15px var(--main); transform: scale(1.05); z-index: 5;}
+    
+    /* Hit animations for magic strikes */
+    .hit-flash { animation: strike 0.4s forwards; }
+    .hit-crit { animation: crit_strike 0.5s forwards; }
+    @keyframes strike { 0% { background: #00d4ff; box-shadow: 0 0 30px #00d4ff;} 100% { background:var(--stone);} }
+    @keyframes crit_strike { 0% { background: #f1c40f; box-shadow: 0 0 50px white; transform:scale(1.1);} 100% { background:var(--stone); transform:scale(1);} }
     
     .r-n { grid-area: N; }  .r-s { grid-area: S; }  
     .r-e { grid-area: E; }  .r-w { grid-area: W; } 
-    .r-c { grid-area: C; border-color: gold; height: 140px; width: 170px; background: rgba(50,40,0,0.6);}
+    
+    /* Throne room overrides */
+    .r-c { grid-area: C; border-color: #f39c12; border-width: 4px; height: 155px; width: 195px; background: rgba(50,20,0,0.8); display:flex; flex-direction:column; justify-content:center; box-shadow: inset 0 0 40px rgba(0,0,0,0.8);}
+    .king-icon {font-size:40px; text-shadow:0 0 20px #f1c40f; z-index:1; opacity: 0.9;}
 
-    /* שכבות הויזואל - מפלצות מתרוצצות בפנים החדרים */
     .alien-layer {
-        position: absolute; top: 30px; left: 5px; right: 5px; bottom: 35px;
+        position: absolute; top: 35px; left: 0; right: 0; bottom: 35px;
         display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
-        gap: 5px; font-size: 22px; filter: drop-shadow(2px 2px 2px #000);
-        pointer-events: none; /* כדי שהאמוגים לא יבלוקי לחיצות על הכפתור */
+        gap: 6px; font-size: 28px; filter: drop-shadow(4px 4px 6px rgba(0,0,0,1));
+        pointer-events: none;
     }
-    .floating-alien { animation: floatAlien 1s infinite alternate ease-in-out;}
-    @keyframes floatAlien { from {transform: translateY(-2px);} to {transform: translateY(2px);} }
-    
+    .enemy-pop { animation: floatEnemy 0.6s infinite alternate; }
+    @keyframes floatEnemy {from{transform:translateY(0)}to{transform:translateY(4px)}}
 
-    /* מתג וכפתורים */
-    .hp-strip { height: 6px; background: #333; margin-top: auto; margin-bottom: 8px; border-radius:2px;}
-    .hp-val { height: 100%; background: #0f0; width: 100%; transition: 0.4s;}
+    /* Custom hp bars for Castle walls */
+    .hp-strip { height: 10px; background: #000; margin-top: auto; margin-bottom: 5px; border-radius:3px; border:1px solid #444;}
+    .hp-val { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s;}
     
-    .action-row {display:flex; gap: 4px; z-index:2;}
+    .action-row {display:flex; gap: 5px; z-index:2;}
     .btn { 
-        flex: 1; border: none; padding: 6px 0; border-radius:4px;
-        font-family: inherit; font-weight: bold; cursor: pointer; color: white; transition: 0.1s;
+        flex: 1; border: 2px solid transparent; padding: 6px 0; border-radius:4px;
+        font-family: inherit; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.1s;
     }
-    .btn-fire { background: #b01515; } .btn-fire:hover {background: #d42222;}
-    .btn-fix { background: #065ca8; } .btn-fix:hover {background: #147ce3;}
-    .btn-fire:active, .btn-fix:active { transform:scale(0.9);}
-    
-    .danger-glow { animation: blink_danger 1s infinite; border-color: var(--alert); background: rgba(80,0,10, 0.8);}
-    @keyframes blink_danger { 50% { box-shadow: 0 0 30px var(--alert); } }
+    .btn-fire { background: #8e44ad; color:#fff; border-bottom:3px solid #4a235a;} 
+    .btn-fire:hover { background: #9b59b6;} 
+    .btn-fire:active { transform: translateY(3px); border-bottom-width:0px;}
 
-    /* הקומה של המסכים */
-    .bottom-panel { height: 200px; background: #080c14; border-top: 2px solid #23426e; display: grid; grid-template-columns: 2fr 1fr; z-index:10;}
-    .logs { padding: 15px; overflow-y: auto; font-size: 13px; line-height:1.6; border-left: 2px solid #23426e;
-            box-shadow: inset 0 0 30px #000; display:flex; flex-direction: column-reverse; /* הטריק שהגוללים הפוך החדש מודגש */
-    }
-    .log-line { margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dotted rgba(255,255,255,0.1); opacity:0.8;}
-    .log-line:first-child { opacity:1; text-shadow: 0 0 5px currentColor; font-weight:bold;} /* הודעה הכי מעודכנת הציעה קשקוש קונטרסית*/
-    
-    .sys-controls { padding: 15px; display: flex; flex-direction: column; gap: 10px; justify-content: center; }
-    .big-btn { padding: 12px; background: #13243d; border: 1px solid var(--main); border-radius:5px; color: var(--main); font-family: inherit; font-weight:bold; cursor: pointer;}
-    .big-btn:hover { background: var(--main); color: #000; box-shadow:0 0 15px var(--main);}
-    
-    .emp-btn {border-color: #d112b1; color: #ff3dfb; box-shadow: inset 0 0 10px #ff3dfb; animation: neon 2s infinite;}
-    .emp-btn:hover {background: #ff3dfb; color: #fff;}
-    @keyframes neon { 50% { box-shadow: inset 0 0 20px #ff3dfb; } }
+    .btn-fix { background: #34495e; color:#fff; border-bottom:3px solid #2c3e50;}
+    .btn-fix:hover { background: #7f8c8d; }
+    .btn-fix:active { transform: translateY(3px); border-bottom-width:0px;}
 
-    .btn-reset { margin-top: auto; padding: 4px; font-size:11px; background: none; border:1px dotted red; color: red; cursor:pointer;}
-    .btn-reset:hover {background:red; color:white;}
+    .danger-glow { animation: blink_danger 1s infinite; border-color: var(--blood); }
+    @keyframes blink_danger { 50% { box-shadow: inset 0 0 20px var(--blood); } }
     
-    .back-btn {position: absolute; top:10px; left:10px; color:#fff; text-decoration:none; font-size:12px; border:1px solid #fff; padding:3px 8px; z-index: 100;}
-    
-    .sys { color: #8eb3ff; } .danger { color: #ff477e; } .success { color: #2ce852; } .info { color: #fcc919; }
+    .float-text { position: absolute; font-size: 24px; font-family:'sans-serif'; font-weight:900; animation: floatUp 1.2s forwards; pointer-events: none; text-shadow:2px 2px 2px #000; z-index: 100; left:40%;}
+    @keyframes floatUp { 0%{ transform:translateY(0) scale(1.5); opacity:1;} 100%{transform:translateY(-60px) scale(1); opacity:0;} }
 
+    /* The Controls / Logs section */
+    .bottom-panel { height: 180px; background: #0b0710; border-top: 3px solid #5a3070; display: grid; grid-template-columns: 2fr 1.5fr;}
+    
+    /* Cool Logs Panel */
+    .logs { padding: 15px; overflow-y: auto; font-size: 14px; border-left: 2px solid #5a3070; background:rgba(0,0,0,0.5); display:flex; flex-direction: column-reverse; }
+    .log-line { margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dotted rgba(255,255,255,0.05); color:#a9a1af;}
+    .log-line:first-child { color:#e5c468; font-weight:bold; }
+    
+    .sys-controls { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items:center; }
+    
+    /* Bottom big buttons styling */
+    .big-btn { padding: 15px; border: 2px solid; border-radius:6px; font-family: inherit; font-size:14px; cursor: pointer; font-weight:bold;}
+    
+    .charge-btn { background:#1f1326; color: var(--mana); border-color:var(--mana); grid-column:span 2;}
+    .charge-btn:hover { background:var(--mana); color:#000; box-shadow:0 0 20px var(--mana);}
+
+    .vent-btn {background: #27ae60; border-color: #1e8449; color:white; box-shadow: inset 0 -3px #1e8449;} 
+    .vent-btn:hover{filter:brightness(1.1); transform:translateY(2px);}
+    
+    .emp-btn {background: #e74c3c; border-color: #c0392b; color:white; box-shadow: inset 0 -3px #c0392b;} 
+    .emp-btn:hover{filter:brightness(1.1); transform:translateY(2px);}
+
+    .back-btn {position: absolute; top:12px; left:12px; color:#ccc; text-decoration:none; font-size:12px; border:1px solid #555; border-radius:4px; padding:6px 12px; z-index: 100;}
 </style>
 </head>
 <body>
-<!-- לכיוון לתשתיות היכל המשחקים בחוץ! -->
-<a href="/" class="back-btn">🔙 ארקייד HUB</a>
+<a href="/" class="back-btn">למסך משחקים אקייד</a>
 
 <div class="hud">
     <div class="bar-box">
-        ⚡ מתח כוח: <span id="txt-en">100</span>
-        <div class="bar"><div id="bar-en" class="fill" style="background:#00f3ff"></div></div>
+        <span style="font-size:22px;">💎</span> מאנה / קסם 
+        <div class="bar"><div id="bar-en" class="fill" style="background:var(--mana); box-shadow:0 0 10px var(--mana);"></div></div>
+        <div style="font-size:12px; margin-top:2px;" id="txt-en">250/250</div>
     </div>
+    
     <div class="hud-title">
-        <h2 style="margin:0; letter-spacing:4px; text-shadow:0 0 10px var(--main);">PROXIMA STATION</h2>
-        <div style="font-size:13px; color:#7d96bb;">יום פריסה: <span id="day-val" style="color:white;font-weight:bold;font-size:16px;">1</span> | ליבת חסינות: <span id="txt-core">1000</span></div>
+        <h2>CASTLE DEFENDER</h2>
+        <div>יום מתקפה <span id="day-val" style="color:#e74c3c; font-weight:bold; font-size:18px;">1</span> | חסינות הכס: <span id="txt-core" style="color:#f1c40f;">1000</span></div>
     </div>
+    
     <div class="bar-box">
-        💨 יתרת חמצן: <span id="txt-ox">100</span>
-        <div class="bar"><div id="bar-ox" class="fill" style="background:#2ce852"></div></div>
+        <span style="font-size:22px;">🛡️</span> מורל צבאי
+        <div class="bar"><div id="bar-ox" class="fill" style="background:#e74c3c"></div></div>
+        <div style="font-size:12px; margin-top:2px;" id="txt-ox">100%</div>
     </div>
 </div>
 
 <div class="station">
-    <!-- North -->
     <div class="room r-n" id="room-N">
-        <div style="font-weight:bold; text-shadow:1px 1px 0 #000;">האנגר פלוטוניום (צ)</div>
+        <div style="color:#aab7b8; font-size:15px; border-bottom:1px solid #555; padding-bottom:4px;">השער הצפוני (N)</div>
         <div class="alien-layer" id="aliens-N"></div>
         <div class="hp-strip"><div class="hp-val" id="hp-N"></div></div>
         <div class="action-row">
-            <button class="btn btn-fire" onclick="act('fire', 'N')">🔥 תקיפה(25)</button>
-            <button class="btn btn-fix" onclick="act('repair', 'N')">🔧 שיקום(20)</button>
+            <button class="btn btn-fire" onclick="act('fire', 'N')">הכה!⚡</button>
+            <button class="btn btn-fix" onclick="act('repair', 'N')">בנה!🧱</button>
         </div>
     </div>
 
-    <!-- West -->
     <div class="room r-w" id="room-W">
-        <div style="font-weight:bold; text-shadow:1px 1px 0 #000;">נשקיית סיבים (מ)</div>
+        <div style="color:#aab7b8; font-size:15px; border-bottom:1px solid #555; padding-bottom:4px;">חומה המערב (W)</div>
         <div class="alien-layer" id="aliens-W"></div>
         <div class="hp-strip"><div class="hp-val" id="hp-W"></div></div>
         <div class="action-row">
-            <button class="btn btn-fire" onclick="act('fire', 'W')">🔥 תקיפה(25)</button>
-            <button class="btn btn-fix" onclick="act('repair', 'W')">🔧 שיקום(20)</button>
+            <button class="btn btn-fire" onclick="act('fire', 'W')">הכה!⚡</button>
+            <button class="btn btn-fix" onclick="act('repair', 'W')">בנה!🧱</button>
         </div>
     </div>
 
-    <!-- CORE (HEART OF THE STATION) -->
-    <div class="room r-c" id="room-CORE" title="מרכז בקרה - אל תיתן להם להגיע הנה!">
-        <div style="color:gold; font-size:18px; font-weight:900; letter-spacing:1px; margin-bottom:5px;">ליבת פיקוד רגישה</div>
-        <!-- פה מגיע פקוד ה-ALIEN אם פורצים למרכז -->
-        <div class="alien-layer" id="aliens-CORE" style="font-size:32px;"></div> 
-        <div style="font-size:25px; margin:auto; z-index:1; opacity:0.3; animation:pulse 4s infinite;">☢️</div>
-        <div class="hp-strip" style="background:#000;"><div class="hp-val" id="hp-CORE" style="background:gold"></div></div>
+    <!-- המלך שלנו -->
+    <div class="room r-c" id="room-CORE">
+        <div style="color:#f1c40f; font-size:17px; text-shadow:2px 2px 0 #000;">כס המלכות 🏰</div>
+        <div class="alien-layer" id="aliens-CORE" style="font-size:40px;"></div> 
+        <div class="king-icon">🧙‍♂️👑</div>
+        <div class="hp-strip" style="background:#3e2723; margin:0 auto; width:80%;"><div class="hp-val" id="hp-CORE" style="background:#f1c40f;"></div></div>
     </div>
 
-    <!-- East -->
     <div class="room r-e" id="room-E">
-        <div style="font-weight:bold; text-shadow:1px 1px 0 #000;">מפרץ עגינה (מז)</div>
+        <div style="color:#aab7b8; font-size:15px; border-bottom:1px solid #555; padding-bottom:4px;">מגדל המזרח (E)</div>
         <div class="alien-layer" id="aliens-E"></div>
         <div class="hp-strip"><div class="hp-val" id="hp-E"></div></div>
          <div class="action-row">
-            <button class="btn btn-fire" onclick="act('fire', 'E')">🔥 תקיפה(25)</button>
-            <button class="btn btn-fix" onclick="act('repair', 'E')">🔧 שיקום(20)</button>
+             <button class="btn btn-fire" onclick="act('fire', 'E')">הכה!⚡</button>
+            <button class="btn btn-fix" onclick="act('repair', 'E')">בנה!🧱</button>
         </div>
     </div>
 
-    <!-- South -->
     <div class="room r-s" id="room-S">
-        <div style="font-weight:bold; text-shadow:1px 1px 0 #000;">ליטיום סיילס (ד)</div>
+        <div style="color:#aab7b8; font-size:15px; border-bottom:1px solid #555; padding-bottom:4px;">ביצות הדרום (S)</div>
         <div class="alien-layer" id="aliens-S"></div>
         <div class="hp-strip"><div class="hp-val" id="hp-S"></div></div>
         <div class="action-row">
-            <button class="btn btn-fire" onclick="act('fire', 'S')">🔥 תקיפה(25)</button>
-            <button class="btn btn-fix" onclick="act('repair', 'S')">🔧 שיקום(20)</button>
+             <button class="btn btn-fire" onclick="act('fire', 'S')">הכה!⚡</button>
+            <button class="btn btn-fix" onclick="act('repair', 'S')">בנה!🧱</button>
         </div>
     </div>
 </div>
 
 <div class="bottom-panel">
-    <!-- LOG TERMINAL -->
     <div class="logs" id="logbox"></div>
-    
-    <!-- CENTRAL BUTTON CONTROLS -->
     <div class="sys-controls">
-        <button class="big-btn emp-btn" onclick="act('emp')" title="מכת חרמש הפוגעת בכל אזור המשחק מול האויבים כולם">💥 גל השמד T.E.S.L.A (-80⚡)</button>
-        <button class="big-btn" onclick="act('vent')" style="border-color:#2ce852; color:#2ce852;">💨 מזגן שדה אוויר / העלאת O2 (-30⚡)</button>
-        <button class="big-btn" onclick="act('wait')" style="border-style:dashed;">⏳ הסתר והשקט! (-אגירת מתח לזמן מגן)</button>
-        <button class="btn-reset" onclick="act('reset')">⏻ איפוס שרתי מערכה בסיסי (REBOOT)</button>
+        <button class="big-btn charge-btn" onclick="act('wait')">🌌 מדיטצית חצות הליל (45+ מאנה) </button>
+        
+        <button class="big-btn vent-btn" onclick="act('vent')" title="להפיח אש בלוחמים (+50% מורל צבא)">🎺 קריאה להסתער! (15💧)</button>
+        <button class="big-btn emp-btn" onclick="act('emp')" title="להטיל גל כישוף שהופך כל רשע לעפר בכל האגפים">☄️ פקודת יום הדין! (80💧)</button>
     </div>
 </div>
 
 <script>
-    // הURL התיאורתי הדינאמי לHUB המשותף. מובנה כדי לעבוד במיקור צד! 
-    const API = "update"; 
+    // פעלולים של הדפדפן להשלמת קוביד המפלצות
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    
+    function beep(type, freq, time, pitchShift=false) {
+        if(ctx.state === 'suspended') ctx.resume();
+        let osc = ctx.createOscillator(); let gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        if (pitchShift) osc.frequency.exponentialRampToValueAtTime(freq*0.2, ctx.currentTime+time); // צליל יורד לפגיעות עמוקות במאגיה.
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + time);
+        
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + time);
+    }
+    
+    const SFX = {
+        magic_hit: () => beep('triangle', 600, 0.4, true),         // סאונד מטאור כישוף שיורה אבק   
+        crit: () => beep('sawtooth', 300, 0.7, true),              // סמייט עצבני מאוד מתנדף קול בארומטי.
+        build: () => {beep('square', 100, 0.2); setTimeout(()=>beep('square',150,0.1),100)},  // הקישים של חישרוד
+        heal_morale: () => beep('sine', 400, 0.6),    
+        win_mana: () => beep('sine', 1200, 0.2) // בלינק כשמקבלים טיפה נשמה ליצור קסם אבו  
+    };
 
-    // מתקן זיכרון להקראת CORE שעברה 
+    const API = "update"; 
     let previousCoreDefense = 1000;
 
     async function act(action, target=null) {
+        if(ctx.state === 'suspended') ctx.resume();
         try {
             let res = await fetch(API, {
                 method: 'POST', 
@@ -463,108 +518,96 @@ HTML = """
             });
             let d = await res.json();
 
-            // === במקרה מוות טראגי של הקונסולה ====== 
             if (d.dead) {
-                // הרעד מסך מוגבר רציני
                 document.body.classList.add("screen-shake"); 
-                document.body.style.animationIterationCount = "15"; 
-                document.body.classList.add("low-oxygen"); // סאבים הכל באדום חצי שקוף דכאוני.
-                
-                setTimeout(() => {
-                    alert("!! נטרול התראת צוללת! משחקי ההישרדות הסתיימו. \\nהמפלים קרסו לאט לאט באזוב מלח. שרדתם פולשות זרועו במישור משך מחזורי " + d.day + " ימים פליאודים!.");
-                    location.reload(); // רענון מהקונסולה הניטש 
-                }, 300);
+                beep('sawtooth', 80, 2, true);
+                setTimeout(() => { alert("🏰 הכסא נפל! חוד הזומבים הפך את עצמותייך לכסא הבא! פוססנו ביום " + d.day); location.reload();}, 800);
                 return;
             }
 
-            // עדכון משאבים ותיאורי מחסה (Bars Setup) 
-            updateBar('en', d.stats.energy);
-            updateBar('ox', d.stats.oxy);
-            document.getElementById('day-val').innerText = d.stats.day;
-            document.getElementById('txt-core').innerText = d.stats.core;
+            // Upate HUD  ====== 
+            document.getElementById('txt-en').innerText = d.stats.energy;
+            document.getElementById('bar-en').style.width = Math.min((d.stats.energy / 250)*100,100) + "%"; 
+            document.getElementById('bar-ox').style.width = d.stats.oxy + "%"; 
+            document.getElementById('txt-ox').innerText = d.stats.oxy + "%"; 
             
-            // טעינה וויזואל קונוס מובהק בחוסר חמצן !
-            if(d.stats.oxy < 30) document.body.classList.add("low-oxygen");
-            else document.body.classList.remove("low-oxygen");
-
-            // --- ריקוד ושפירת שייקינג --- מסננת CORE כדי שהליבה יראה "אוכל טיל".
+            // תזמורי ויזואלית שחיי המלחמות ביגש! צלילה בהנפות הליבה במיטבת. 
             if (d.stats.core < previousCoreDefense) {
-                document.body.classList.remove("screen-shake");
-                void document.body.offsetWidth; // הטריק המזוהף לדרוך אנימציה בכוח דפדפני !! 
-                document.body.classList.add("screen-shake");
+                document.body.classList.remove("screen-shake"); void document.body.offsetWidth; document.body.classList.add("screen-shake");
             }
-            previousCoreDefense = d.stats.core; // איוף אחסוני המועט
+            previousCoreDefense = d.stats.core; 
             
-            
-            //  === ויזואליה של המפות הקרקעות של פליט המכמים  ==== 
-            // 1. ראשית נרוקן את החייזרים מהלוחות: 
-            const dirs = ['N','S','E','W', 'CORE'];
-            dirs.forEach(k => {
-               document.getElementById(`aliens-${k}`).innerHTML = ''; 
-            });
+            // מטפל באירועים מהסרבר (הצגת עפעי פייט אגדה ויזוילא) :
+            if (d.events && d.events.length > 0) {
+                d.events.forEach(ev => {
+                    let roomEl = document.getElementById("room-" + ev.room);
+                    if (ev.type === "emp") { document.body.classList.add("emp-blast"); setTimeout(()=>document.body.classList.remove("emp-blast"),600); beep('square',200, 1.2, true);}
+                    if (ev.type === "charge") beep('sine',300, 0.8);
+                    if (ev.type === "air") SFX.heal_morale(); // השעאת תקיפים שגריר לחצרן האצולה אליו גועשו
+                    if (ev.room) {
+                        if (ev.type === "shoot") { SFX.magic_hit(); roomEl.classList.remove("hit-flash"); void roomEl.offsetWidth; roomEl.classList.add("hit-flash"); spawnTextFloat("-50💥", ev.room, "cyan"); }
+                        if (ev.type === "crit_shoot") { SFX.crit(); roomEl.classList.remove("hit-crit"); void roomEl.offsetWidth; roomEl.classList.add("hit-crit"); spawnTextFloat("-CRIT-", ev.room, "gold"); }
+                        if (ev.type === "heal") { SFX.build(); spawnTextFloat("+מגן אבנים", ev.room, "gray"); }
+                        if (ev.type === "kill") { SFX.win_mana(); spawnTextFloat("+💎", ev.room, "cyan"); }
+                        if (ev.type === "alarm" || ev.type==="breach") { beep('sawtooth', 150, 0.3); } // איים הבוסי תרצה ששעטים לקלל המפקדה אל שוותה הקפיצ !
+                    }
+                });
+            }
 
-            // 2. כעת נשתול אותם סרוצים ויש משיקים קבצות במודים: 
+            // יחולול מחודש חיל ולוחות מול האגנפים למפות ציינרים המיקום ! ==== 
+            const dirs = ['N','S','E','W', 'CORE'];
+            dirs.forEach(k => document.getElementById(`aliens-${k}`).innerHTML = ''); 
+
             d.enemies.forEach(e => {
                 let theDiv = document.getElementById(`aliens-${e.loc}`);
-                if (theDiv) {
-                   // עניק ציפה מרטיפה אסתטית מפלסטיינט.   
-                   theDiv.innerHTML += `<span class="floating-alien" title="${e.name} (פציע בקווי מתח תאימות סמיות עד רמות כפול ${Math.floor(e.hp)} שורד)" style="cursor:help;">${e.icon}</span>`;
-                }
+                if (theDiv) {  theDiv.innerHTML += `<span class="enemy-pop" title="תזונש ימי המחירי המולא : פתא ${e.hp} שומשמות !">${e.icon}</span>`; }
             });
 
-
-            // == מדדים וכוננות סוג המרכב ופילוג מגבלת שולי כוח =====
+            // פתאום הבלים לא צועני החקלה   ==== 
             for (let k in d.sectors) {
                 let sec = d.sectors[k];
                 let elHp = document.getElementById("hp-"+k);
                 let pct = (sec.defense / sec.max_def) * 100;
                 
                 if(elHp) elHp.style.width = pct + "%";
-                
-                // שינוי צבעי הסכך. אם כורה זה איום מסומן, שיוף לאנחנו רעים! 
                 let roomEl = document.getElementById("room-"+k);
-                if (pct < 40 && pct > 0) {
-                     if(k!=="CORE") elHp.style.backgroundColor = "red";
-                     else elHp.style.backgroundColor = "orange";
+                if (pct < 30 && pct > 0) {
+                     if(k!=="CORE") elHp.style.backgroundColor = "var(--blood)"; else elHp.style.backgroundColor = "orange";
                      roomEl.classList.add("danger-glow");
                 } 
                 else if(pct <= 0) { 
-                    elHp.style.backgroundColor = "#222"; 
-                    roomEl.style.opacity = "0.4"; // חדר הרוס / תקיף ליבה טרונית טועית לחלוקה כפרי
-                    roomEl.classList.remove("danger-glow");
+                    elHp.style.backgroundColor = "transparent"; roomEl.style.opacity = "0.5"; roomEl.style.filter = "grayscale(100%)"; roomEl.classList.remove("danger-glow");
                 }
                 else {
-                    if (k === "CORE") elHp.style.backgroundColor = "gold";
-                    else elHp.style.backgroundColor = "var(--main)"; // גוף חי רלוונטי
-                    
-                    roomEl.style.opacity = "1";
-                    roomEl.classList.remove("danger-glow");
+                    elHp.style.backgroundColor = "#2ecc71";
+                    roomEl.style.opacity = "1"; roomEl.style.filter = "none"; roomEl.classList.remove("danger-glow");
                 }
             }
 
-
-            // יורד הLOG ים לקודים שיישאו את כל הסחריץ: (Flex reverse helps to render lines to top instead appends downside limits bounds).
+            // Log output text magic display format reverse.   ==== 
             let lb = document.getElementById("logbox");
             lb.innerHTML = "";
             let latests = d.log.reverse(); 
             latests.forEach(l => {
-                lb.innerHTML += `<div class="log-line ${l.type}"> [sys@terminal~]# ${l.text}</div>`;
+                lb.innerHTML += `<div class="log-line ${l.type}"> * ${l.text}</div>`;
             });
 
-        } catch(e) { console.error("חיבור אבד לרפסודה!", e); }
+        } catch(e) {}
     }
 
 
-    function updateBar(id, val) {
-        document.getElementById("txt-"+id).innerText = val + "%";
-        document.getElementById("bar-"+id).style.width = Math.min(val,100) + "%"; // חריץ על חריגות מקרא אופי לא עובר מאה בפאן UI
-        
-        let bb = document.getElementById("bar-"+id);
-        if(val <= 30) bb.style.backgroundColor = "var(--alert)";
-        else bb.style.backgroundColor = id === 'en' ? 'var(--main)' : '#2ce852'; // ציבוץ מקורי דשא 
+    // הפצה מספרים ויורח על המסמך סילובציה.
+    function spawnTextFloat(txt, roomId, color) {
+        let theDiv = document.getElementById("room-" + roomId);
+        if(!theDiv) return;
+        let floater = document.createElement('div');
+        floater.className = 'float-text';
+        floater.style.color = color;
+        floater.innerText = txt;
+        theDiv.appendChild(floater);
+        setTimeout(() => floater.remove(), 1200);
     }
     
-    // קלרד תמוני מסד.
     window.onload = () => { act('init'); };
 </script>
 </body>
