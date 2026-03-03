@@ -224,76 +224,82 @@ class Player extends Entity {
         this.standHeight = 52;
         this.crouchHeight = 26;
     }
-    update() {
-        if (this.hp <= 0) return;
+update() {
+    if (this.hp <= 0) return;
 
-        // crouch
-        const targetH = (keys.s && this.grounded) ? this.crouchHeight : this.standHeight;
-        if (this.h !== targetH) {
-            this.y += this.h - targetH;
-            this.h = targetH;
-        }
-
-        // movement
-        if (!keys.s || !this.grounded) {
-            if (keys.a) { this.vx -= 1.8; }
-            if (keys.d) { this.vx += 1.8; }
-        }
-        if (keys.w && this.grounded) {
-            this.vy = -13.5;
-            this.grounded = false;
-            this.jumpCount = 1;
-            spawnParticles(this.x + 16, this.y + this.h, "#fff", 8);
-        } else if (keys.w && this.jumpCount < (hasDoubleJump ? 2 : 1) && !this.grounded) {
-            this.vy = -13;
-            this.jumpCount++;
-            spawnParticles(this.x + 16, this.y + this.h, "#fff", 12);
-        }
-
-        // auto energy
-        this.energy = Math.min(this.maxEnergy, this.energy + 0.45);
-
-        // attacks
-        if (this.attackCooldown > 0) this.attackCooldown--;
-
-        if (keys.h && this.attackCooldown <= 0 && this.energy >= 9) { // חלשה
-            this.attack(15, 7, "#ffff00", 8, 1.2); // dmg, speed, color, cooldown, energyCost
-        }
-        if (keys.j && this.attackCooldown <= 0 && this.energy >= 16) { // רגילה
-            this.attack(26, 11, this.color, 14, 1.8);
-        }
-        if (keys.k && this.attackCooldown <= 0 && this.energy >= 28) { // חזקה
-            this.attack(48, 9, "#ff8800", 24, 3.2);
-        }
-
-        // physics
-        this.vy += GRAVITY;
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vx *= FRICTION;
-
-        // ground
-        const groundY = 400;
-        if (this.y + this.h > groundY) {
-            this.y = groundY - this.h;
-            this.vy = 0;
-            this.grounded = true;
-            this.jumpCount = 0;
-        } else {
-            this.grounded = false;
-        }
-
-        if (this.x < 0) { this.x = 0; this.vx = 0; }
-
-        // HUD
-        document.getElementById('hp-bar').style.width = Math.max(0, this.hp / this.maxHp * 100) + "%";
-        document.getElementById('en-bar').style.width = (this.energy / this.maxEnergy * 100) + "%";
-
-        // super power timer
-        if (superPower && superTimer > 0) superTimer--;
-        if (superTimer <= 0) superPower = false;
+    // crouch – רק אם על הקרקע
+    const isCrouching = keys.s && this.grounded;
+    const targetH = isCrouching ? this.crouchHeight : this.standHeight;
+    if (this.h !== targetH) {
+        const diff = this.h - targetH;
+        this.y += diff;  // שומר על רגליים על הקרקע
+        this.h = targetH;
     }
 
+    // תנועה – חסומה רק אם crouch מלא (אפשר להוסיף תנועה איטית אם רוצים)
+    let moveSpeed = isCrouching ? 0.8 : 1.8;  // איטי יותר כשמתכופף
+    if (keys.a) { this.vx -= moveSpeed; }
+    if (keys.d) { this.vx += moveSpeed; }
+
+    // קפיצה + כפולה
+    if (keys.w && this.grounded) {
+        this.vy = -13.5;
+        this.grounded = false;
+        this.jumpCount = 1;
+        spawnParticles(this.x + 16, this.y + this.h, "#fff", 8);
+    } else if (keys.w && this.jumpCount < (hasDoubleJump ? 2 : 1) && !this.grounded && this.vy > -5) {
+        // אפשר רק אם לא ממש באוויר גבוה
+        this.vy = -13;
+        this.jumpCount++;
+        spawnParticles(this.x + 16, this.y + this.h, "#fff", 12);
+    }
+
+    // טעינה ידנית חזרה עם U (אם אתה רוצה – אפשר להסיר אם לא)
+    if (keys.u) {
+        this.energy = Math.min(this.maxEnergy, this.energy + 3.5);  // טעינה מהירה
+        this.vx *= 0.6;  // מאט אותך קצת בזמן טעינה
+        spawnParticles(this.x + this.w/2, this.y + this.h/2, this.color, 2);
+    } else {
+        // טעינה אוטומטית איטית יותר כשלא לוחץ U
+        this.energy = Math.min(this.maxEnergy, this.energy + 0.45);
+    }
+
+    // התקפות – ניקוי תנאים + debug
+    if (this.attackCooldown > 0) this.attackCooldown--;
+
+    if (keys.h && this.attackCooldown <= 0 && this.energy >= 9) {
+        this.attack(15, 7, "#ffff00", 8, 9);   // חלשה
+    }
+    if (keys.j && this.attackCooldown <= 0 && this.energy >= 16) {
+        this.attack(26, 11, this.color, 14, 16); // רגילה
+    }
+    if (keys.k && this.attackCooldown <= 0 && this.energy >= 28) {
+        this.attack(48, 9, "#ff8800", 24, 28);   // חזקה
+    }
+
+    // פיזיקה בסיסית
+    this.vy += GRAVITY;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= FRICTION;
+
+    // קרקע
+    const groundY = 400;
+    if (this.y + this.h > groundY) {
+        this.y = groundY - this.h;
+        this.vy = 0;
+        this.grounded = true;
+        this.jumpCount = 0;
+    } else {
+        this.grounded = false;
+    }
+
+    if (this.x < 0) { this.x = 0; this.vx = 0; }
+
+    // HUD update
+    document.getElementById('hp-bar').style.width = Math.max(0, this.hp / this.maxHp * 100) + "%";
+    document.getElementById('en-bar').style.width = (this.energy / this.maxEnergy * 100) + "%";
+}
     attack(dmg, speed, color, cd, energyCost) {
         this.attackCooldown = cd;
         this.energy -= energyCost;
@@ -680,3 +686,4 @@ window.onload = () => {
 
 if __name__ == "__main__":
     app.run(port=5009, debug=True)
+
