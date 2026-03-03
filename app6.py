@@ -470,9 +470,9 @@ HTML = """
 
     <div class="d-pad">
         <button class="btn-arr up" onclick="send('move', [0,1])">⬆</button>
-        <button class="btn-arr left" onclick="send('move', [-1,0])">⬅</button>
+        <button class="btn-arr left" onclick="send('move', [1,0])">⬅</button>
         <button class="btn-arr down" onclick="send('move', [0,-1])">⬇</button>
-        <button class="btn-arr right" onclick="send('move', [1,0])">➡</button>
+        <button class="btn-arr right" onclick="send('move', [-1,0])">➡</button>
     </div>
 </div>
 
