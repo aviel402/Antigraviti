@@ -3,7 +3,7 @@ from flask import Flask, render_template_string, jsonify, request
 # חשוב: אפליקציה זו מיובאת כ- game9 בקובץ הראשי
 app = Flask(__name__)
 app.secret_key = 'clover_master_key_v100_final'
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 2 # שומר למשתמש התחברות קפואה ל7 ימים אליו אישית בלבד (משאר קופות ארקייד.. ) 
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 3 # שומר למשתמש התחברות קפואה ל2 ימים אליו אישית בלבד (משאר קופות ארקייד.. ) 
 
 # אחסון נתונים בזיכרון (מתאפס בריסטארט של הסרבר)
 PLAYER_DATA = {
@@ -854,4 +854,5 @@ function winGame() {
 
 if __name__ == "__main__":
     app.run(port=5009, debug=True)
+
 
