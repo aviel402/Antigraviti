@@ -747,26 +747,67 @@ async function init(element) {
     spawnWave();
 }
 function showElementSelection() {
-    document.getElementById('menu-screen').classList.add('hidden');
-    document.getElementById('element-screen').classList.remove('hidden');
+    const menuScreen = document.getElementById('menu-screen');
+    const elementScreen = document.getElementById('element-screen');
+    
+    if (!menuScreen || !elementScreen) {
+        console.error("לא נמצאו אלמנטי מסך – בדוק IDs");
+        return;
+    }
+    
+    menuScreen.classList.add('hidden');
+    elementScreen.classList.remove('hidden');
+    
     let container = document.getElementById('element-selection');
-    container.innerHTML = '';
+    if (!container) {
+        console.error("לא נמצא container של בחירת אלמנטים");
+        return;
+    }
+    
+    container.innerHTML = '';  // מנקה את הכפתורים הקודמים אם יש
+    
     for (let el in ELEMENTS) {
         let btn = document.createElement('div');
         btn.className = 'element-btn';
         btn.style.borderColor = ELEMENTS[el].color;
         btn.style.color = ELEMENTS[el].color;
         btn.innerText = el.toUpperCase() + '\n' + ELEMENTS[el].desc;
-        btn.onclick = () => startGame(el);
+        btn.onclick = () => startGame(el);   // arrow function – בטוח יותר
         container.appendChild(btn);
     }
 }
+
 async function startGame(element) {
-    document.getElementById('element-screen').classList.add('hidden');
-    document.getElementById('ui-layer').classList.remove('hidden');
-    gameState = "PLAY";
-    await init(element);
-    loop();
+    try {
+        document.getElementById('element-screen').classList.add('hidden');
+        document.getElementById('ui-layer').classList.remove('hidden');
+        gameState = "PLAY";
+
+        // טעינת נתונים מהשרת (אם יש שגיאה – ממשיך בכל זאת)
+        let saved = { shards: 0, max_stage_reached: 1 };
+        try {
+            const res = await fetch('/data');
+            if (res.ok) {
+                saved = await res.json();
+            }
+        } catch (e) {
+            console.warn("לא הצלחנו לטעון שמירה – מתחילים מחדש", e);
+        }
+
+        gameData.stage = Math.max(1, saved.max_stage_reached || 1);
+        gameData.shards = saved.shards || 0;
+
+        player = new Player(element);
+        particles = [];
+        projectiles = [];
+        shake = 0;
+
+        spawnWave();
+        loop();  // מתחיל את לולאת המשחק
+    } catch (err) {
+        console.error("שגיאה בהתחלת המשחק:", err);
+        alert("משהו השתבש בהתחלה – בדוק קונסול (F12)");
+    }
 }
 function loop() {
     if (gameState !== "PLAY") return;
@@ -894,3 +935,4 @@ function winGame() {
 """
 if __name__ == "__main__":
     app.run(port=5009, debug=True)
+
