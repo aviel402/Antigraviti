@@ -747,36 +747,35 @@ async function init(element) {
     spawnWave();
 }
 function showElementSelection() {
-    const menuScreen = document.getElementById('menu-screen');
-    const elementScreen = document.getElementById('element-screen');
+    // מוציא את המסך הראשי ומביא את מסך בחירת האלמנטים
+    let menu = document.getElementById("menu-screen");
+    let elements = document.getElementById("element-screen");
     
-    if (!menuScreen || !elementScreen) {
-        console.error("לא נמצאו אלמנטי מסך – בדוק IDs");
-        return;
-    }
-    
-    menuScreen.classList.add('hidden');
-    elementScreen.classList.remove('hidden');
-    
-    let container = document.getElementById('element-selection');
+    if (menu) menu.classList.add("hidden");
+    if (elements) elements.classList.remove("hidden");
+
+    // מנקה וממלא את הכפתורים של האלמנטים
+    let container = document.getElementById("element-selection");
     if (!container) {
-        console.error("לא נמצא container של בחירת אלמנטים");
+        console.log("לא מצאתי את ה-div של האלמנטים");
         return;
     }
     
-    container.innerHTML = '';  // מנקה את הכפתורים הקודמים אם יש
-    
-    for (let el in ELEMENTS) {
-        let btn = document.createElement('div');
-        btn.className = 'element-btn';
-        btn.style.borderColor = ELEMENTS[el].color;
-        btn.style.color = ELEMENTS[el].color;
-        btn.innerText = el.toUpperCase() + '\n' + ELEMENTS[el].desc;
-        btn.onclick = () => startGame(el);   // arrow function – בטוח יותר
+    container.innerHTML = "";
+
+    // יוצר כפתור לכל אלמנט
+    for (let name in ELEMENTS) {
+        let btn = document.createElement("div");
+        btn.className = "element-btn";
+        btn.style.borderColor = ELEMENTS[name].color;
+        btn.style.color = ELEMENTS[name].color;
+        btn.innerText = name.toUpperCase() + "\n" + ELEMENTS[name].desc;
+        btn.onclick = function() {
+            startGame(name);
+        };
         container.appendChild(btn);
     }
 }
-
 async function startGame(element) {
     try {
         document.getElementById('element-screen').classList.add('hidden');
@@ -935,4 +934,3 @@ function winGame() {
 """
 if __name__ == "__main__":
     app.run(port=5009, debug=True)
-
