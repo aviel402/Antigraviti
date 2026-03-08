@@ -747,19 +747,16 @@ async function init(element) {
     spawnWave();
 }
 function showElementSelection() {
-    // מוציא את המסך הראשי ומביא את מסך בחירת האלמנטים
-    let menu = document.getElementById("menu-screen");
-    let elements = document.getElementById("element-screen");
-    
-    if (menu) menu.classList.add("hidden");
-    if (elements) elements.classList.remove("hidden");
+  console.log("ניסיון לפתוח מסך אלמנטים");   // ← זה יופיע בקונסול אם הפונקציה רצה
 
-    // מנקה וממלא את הכפתורים של האלמנטים
-    let container = document.getElementById("element-selection");
-    if (!container) {
-        console.log("לא מצאתי את ה-div של האלמנטים");
-        return;
-    }
+  let menu = document.getElementById("menu-screen");
+  let sel = document.getElementById("element-screen");
+
+  if (menu) menu.classList.add("hidden");
+  if (sel) sel.classList.remove("hidden");
+
+  console.log("שיניתי מסכים");
+}
     
     container.innerHTML = "";
 
@@ -934,3 +931,4 @@ function winGame() {
 """
 if __name__ == "__main__":
     app.run(port=5009, debug=True)
+
