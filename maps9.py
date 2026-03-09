@@ -1,41 +1,38 @@
-# maps9.py
-
-# נשתמש בזה ליצור משתני שלבים קלים
-# המערך מחזיק 20 מפות/שלבים. 
-# כל stage_config מגדיר אילו אויבים מופיעים ואת מערך הבמות של הרצפה ("platforms") (גובה מהרצפה, מיקום מהשמאל של העולם)
-
-MAPS_CONFIG = []
-
-theme_colors =['#110915', '#0f1a1a', '#2b100e', '#101010', '#181f2f']
-
-for i in range(1, 21):
-    is_boss = (i % 5 == 0)
-    bg = theme_colors[i % len(theme_colors)]
+def generate_maps():
+    maps = {}
     
-    platforms =[]
-    # נוסיף פלטפורמות במקומות קבועים או תלוי שלב, כדי שלא נלך תמיד על קרקע ישרה
-    if not is_boss:
-        if i % 2 == 0:
+    themes =[
+        {"bg": "#0B1D28", "floor": "#1A3644", "name": "Dark Forest", "decor": "forest"}, # שלבים 1-5
+        {"bg": "#311C0C", "floor": "#6B431D", "name": "Dusty Canyon", "decor": "desert"},  # שלבים 6-10
+        {"bg": "#082138", "floor": "#40769D", "name": "Glacier Peaks", "decor": "ice"},     # שלבים 11-15
+        {"bg": "#2F0909", "floor": "#4F1414", "name": "Inferno Volcano", "decor": "magma"}   # שלבים 16-20
+    ]
+    
+    for i in range(1, 21):
+        theme_index = (i - 1) // 5 # כל 5 שלבים נושא חדש
+        is_boss = (i % 5 == 0)
+        
+        # בניית פלטפורמות רנדומליות-מוגדרות מראש לפי השלב
+        platforms = []
+        if not is_boss and i > 2:
             platforms =[
-                {"offset_x": 300, "height": 100, "w": 200},
-                {"offset_x": 700, "height": 220, "w": 150},
-                {"offset_x": 1200, "height": 120, "w": 250}
+                {"x": 300, "y_offset": 120, "w": 200, "h": 20},
+                {"x": 600, "y_offset": 200, "w": 150, "h": 20},
+                {"x": 950, "y_offset": 100, "w": 300, "h": 20}
             ]
-        else:
-            platforms =[
-                {"offset_x": 500, "height": 150, "w": 400},
-            ]
+        
+        # איזה סוגי אויבים להכניס למפה:
+        allowed_enemies = ["melee"]
+        if i >= 3: allowed_enemies.append("jumper")
+        if i >= 6: allowed_enemies.append("shooter")
 
-    # כמויות וסוגי האויבים.
-    MAPS_CONFIG.append({
-        "stage": i,
-        "background": bg,
-        "platforms": platforms,
-        "enemies": {
-            # לאויבים נוספו סוגים - walkers (זוחלים), jumpers (קופצניים), shooters (יורים לייזר מהצד)
-            "walkers": 0 if is_boss else 2 + (i // 2),
-            "jumpers": 0 if is_boss else (i // 3),
-            "shooters": 0 if is_boss else (1 if i > 3 else 0) + (i // 5),
-            "boss": 1 if is_boss else 0
+        maps[i] = {
+            "name": "BOSS CHAMBER" if is_boss else f"{themes[theme_index]['name']} - Sector {i}",
+            "bg": themes[theme_index]["bg"],
+            "floor": themes[theme_index]["floor"],
+            "platforms": platforms,
+            "is_boss": is_boss,
+            "enemies": allowed_enemies
         }
-    })
+        
+    return maps
