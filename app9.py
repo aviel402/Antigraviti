@@ -1,9 +1,9 @@
 from flask import Flask, render_template_string, jsonify, request
 import json
-import maps9  # שולף מפה!
+import maps9
 
 app = Flask(__name__)
-app.secret_key = 'clover_indie_god_mode_v4'
+app.secret_key = 'clover_indie_god_mode_v5_frames'
 
 PLAYER_DATA = {"shards": 0, "max_stage_reached": 1}
 
@@ -67,27 +67,23 @@ GAME_HTML = """
         .controls { align-self:flex-start; pointer-events: auto;}
         kbd { background: #111; border: 1px solid #444; border-bottom:3px solid #555; border-radius:4px; padding: 2px 8px; font-weight: bold; color:var(--gold);}
 
-        /* כפתור פוז בממשק עצמו (שמאלה למעלה) */
         .pause-hud-btn { pointer-events: auto; padding: 12px 24px; font-family:'Righteous'; border-radius:8px; background: rgba(255,255,255,0.1); color:#fff; border: 1px solid rgba(255,255,255,0.3); font-size: 20px; cursor: pointer; backdrop-filter: blur(5px); transition:0.2s;}
         .pause-hud-btn:hover { background: rgba(255,255,255,0.3); box-shadow: 0 0 15px white;}
 
         #stage-alert { position: absolute; top:40%; left:50%; transform: translate(-50%, -50%); font-family:'Righteous'; font-size: 70px; opacity:0; text-shadow: 0 0 20px cyan; letter-spacing:5px;}
 
-        /* לחצני התפריטים בסוף המוות והפוס */
         .menu-btn { padding:15px 40px; border:2px solid #fff; border-radius:8px; color:white; font-size:24px; font-family:'Righteous'; background:transparent; cursor:pointer; margin-top:20px; text-transform:uppercase; transition:0.3s; width: 350px;}
         .menu-btn:hover { background:#fff; color:#000; box-shadow:0 0 20px #fff; transform: scale(1.05);}
     </style>
 </head>
 <body>
 
-<!-- מסך הבית - דמויות -->
 <div id="select-screen" class="screen">
     <h1 class="title">BATTLE HUB</h1>
     <h2>בחר את השליט שלך</h2>
     <div class="char-grid" id="roster"></div>
 </div>
 
-<!-- מסך השהייה / PAUSE -->
 <div id="pause-screen" class="screen hidden" style="background: rgba(10, 15, 25, 0.9); z-index:9000;">
     <h1 class="title" style="filter: hue-rotate(90deg); -webkit-text-fill-color:white; margin-bottom: 20px;">מושהה</h1>
     <button class="menu-btn" onclick="togglePause()">▶ המשך למשחק</button>
@@ -95,7 +91,6 @@ GAME_HTML = """
     <div style="margin-top:20px; color:#aaa;">טיפ: השתמש במקשים ESC או P כדי להמשיך</div>
 </div>
 
-<!-- המשק עצמו שמרחף -->
 <div id="ui-layer" class="hidden">
     <div class="hud-top">
         <div class="glass-panel" style="direction: ltr; min-width:350px;">
@@ -110,7 +105,6 @@ GAME_HTML = """
         </div>
         <div class="glass-panel stage-title" id="stage-info">STAGE 1: FORESTS</div>
         <div style="display:flex; flex-direction:column; gap:10px;">
-             <!-- כפתור חדש להשהיית המסך (למי שאוהב בעכבר) -->
              <button class="pause-hud-btn" onclick="togglePause()">⏸ הופסק</button>
              <div class="glass-panel" style="font-size:18px; color:#ff3b3b; font-family:'Righteous'; font-weight:900;" id="lock-hud">🎯 TARGET LOCKED E</div>
         </div>
@@ -120,50 +114,42 @@ GAME_HTML = """
 
     <div class="glass-panel controls">
         <div><kbd>W</kbd> <kbd>A</kbd> <kbd>D</kbd> - זזים כרגיל</div>
-        <div><kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> - טווח היריות  |  <kbd>Y</kbd> אולטימייט (שלב 10)</div>
-        <div><kbd>U</kbd> לחץ להטעין חיים בזמן שמזיזים הכל ספייס מפלג ל</div>
-        <div><kbd>P</kbd> או <kbd>ESC</kbd> - לעצור/לשמור את השלב המתוזמן ולנשום!</div>
+        <div><kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> - יריות   |   <kbd>Y</kbd> אולטימייט (מנקה שטח בשלב מתקדם)</div>
+        <div><kbd>U</kbd> מגן פתוח / הטענה באוויר לתקוף תוך כדי הישרדות ! </div>
+        <div><kbd>P</kbd> או <kbd>ESC</kbd> - חופש נשימה כדור להמשך קטלניות </div>
     </div>
 </div>
 
-<!-- מסך שנגמרו החיים -->
 <div id="death-screen" class="screen hidden" style="z-index:9500;">
     <h1 class="title" style="color:#c0392b; -webkit-text-fill-color:unset; text-shadow:none;">SYSTEM FAILURE</h1>
-    <h2>נהרגת בשלב הקריטי בחישוב השלב :  <span id="final-lvl" style="color:var(--gold); font-size:30px;"></span> !</h2>
-    <button class="menu-btn" onclick="location.reload()" style="background:#e74c3c;">RESTART SYSTEM</button>
+    <h2>חבל מאוד. מות השליט מפר את סבב <span id="final-lvl" style="color:var(--gold); font-size:30px;"></span> </h2>
+    <button class="menu-btn" onclick="location.reload()" style="background:#e74c3c;">REBOOT CHRONICLES</button>
 </div>
 
 
 <script>
-// חילוץ המפות מהסרבר (שרת פייתון של השקע מנפיק לזה json עוקב)
 const MAPS = {{ maps_json | safe }};
 
-// --- האזנת מערכת לשליטה עם המקלדת ולחיבור מערך הטובים והרעים בתווך הזה ---
 const activeKeys = {};
 window.addEventListener('keydown', e => { 
     if(e.code==='Space') e.preventDefault(); 
-    
-    // אופציית הפוז מקלדת (קובע מרווח תקלות של לחיצה רנדומאלית שמובילה לאסונות תוך כדי בניית ההפסקה)
-    if(e.code === 'KeyP' || e.code === 'Escape'){
-         togglePause();
-    }
+    if(e.code === 'KeyP' || e.code === 'Escape') togglePause();
     activeKeys[e.code]=true;
 });
 window.addEventListener('keyup', e => { activeKeys[e.code]=false; });
 function kd(c) { return activeKeys[c]===true; }
 
-// --- עזרה לדיוק ההיפגשוית על רקע חישובי המסך והאלכסון ! (Collider Rules)
 function intersect(a,b){return!(b.x>a.x+a.w || b.x+b.w<a.x || b.y>a.y+a.h || b.y+b.h<a.y);}
 
 const HEROES =[
-    { id: 'earth', name: 'אדמה', col: '#2ecc71', maxHp: 180, hpRegen: 0.01, speed: 0.7, jump: 12, maxEn: 100, dmgMult: 1.2, enCostMult: 1, pCol: '#27ae60', desc:'חיים כמעט בלתי נגמרים ומכה כואבת, אבל זז לאט. עמדות מבודדות מזה..'},
-    { id: 'fire', name: 'אש', col: '#e74c3c', maxHp: 80, hpRegen: 0, speed: 1.2, jump: 14, maxEn: 120, dmgMult: 1.8, enCostMult: 1, pCol: '#ff7979', desc:'עשוי מזכוכית. זז מהיר. עוגמות תצלומה שיורים את הסביבות עם לחץ אגרסיבי'},
-    { id: 'water', name: 'מים', col: '#3498db', maxHp: 110, hpRegen: 0.15, speed: 1.0, jump: 14, maxEn: 110, dmgMult: 1.0, enCostMult: 1, pCol: '#7ed6df', desc:'משמרים כפול את ההחלמה בשילוב יכולת התכסיים האוטומאטי בלי לעצור..'},
-    { id: 'air', name: 'אוויר', col: '#ecf0f1', maxHp: 90, hpRegen: 0, speed: 1.6, jump: 16, maxEn: 100, dmgMult: 0.8, enCostMult: 0.7, pCol: '#c7ecee', desc:'קפיצה משורדת שומר על הקבוצות בדרך לפקק עולה של הגרייסים! הלחמה גבולית אשפה'},
-    { id: 'lightning', name: 'ברק', col: '#f1c40f', maxHp: 90, hpRegen: 0, speed: 2.0, jump: 13, maxEn: 100, dmgMult: 1.5, enCostMult: 1.5, pCol: '#f9ca24', desc:'טיל תמידי שמפרמט את תנועת החיים מסופקו בזכות הדאונר שלו עליו . חכם ופיקי במיוחד.'},
-    { id: 'magma', name: 'לבה', col: '#d35400', maxHp: 150, hpRegen: 0.05, speed: 0.6, jump: 11, maxEn: 100, dmgMult: 1.6, enCostMult: 1.2, pCol: '#eb4d4b', desc:'יוריות מטורפות למחוץ צמחיה במסה העגולה העוטף שלו את הדם'},
-    { id: 'light', name: 'אור', col: '#ffffb3', maxHp: 100, hpRegen: 0.02, speed: 1.0, jump: 14, maxEn: 300, dmgMult: 0.9, enCostMult: 0.8, pCol: '#fff200', desc:'אנרגיה של זומבים משליחה פלינג למקרי מצוף תאי האקרילונה הגלופאקריסטים - אין כזה!'},
-    { id: 'dark', name: 'חושך', col: '#8e44ad', maxHp: 85, hpRegen: 0, speed: 1.2, jump: 14, maxEn: 120, dmgMult: 1.0, enCostMult: 1.0, pCol: '#9b59b6', desc:'צייד אפל עם VAMPIRE LIFESTEAL שממש עליח לספס על האוויר כל קנה שיורי כדורים קדושים פלאנק.'}
+    { id: 'earth', name: 'אדמה', col: '#2ecc71', maxHp: 180, hpRegen: 0.01, speed: 0.7, jump: 12, maxEn: 100, dmgMult: 1.2, enCostMult: 1, pCol: '#27ae60', desc:'הכי טנקי במשחק עם קיר דמם חיסוני, עמוד תוצר עלי אדמות ללא טחורים . איטי!'},
+    { id: 'fire', name: 'אש', col: '#e74c3c', maxHp: 80, hpRegen: 0, speed: 1.2, jump: 14, maxEn: 120, dmgMult: 1.8, enCostMult: 1, pCol: '#ff7979', desc:'רך בטירוף מת מתשמישים , קופץ קליל נראה ופוסק מנפק נזק טילים על התפוחה'},
+    { id: 'water', name: 'מים', col: '#3498db', maxHp: 110, hpRegen: 0.15, speed: 1.0, jump: 14, maxEn: 110, dmgMult: 1.0, enCostMult: 1, pCol: '#7ed6df', desc:'משמר כפול - חישורי גאסט מהירה מאפס מחזיר לו חיים למד בלי לעצור פעימה בכל רגל'},
+    { id: 'air', name: 'אוויר', col: '#ecf0f1', maxHp: 90, hpRegen: 0, speed: 1.6, jump: 16, maxEn: 100, dmgMult: 0.8, enCostMult: 0.7, pCol: '#c7ecee', desc:'המתנדד והנפלא מהאויר לממש כל דימום ושטות מרדנית שמכה בקצצות הדרמה... פגיעות נמוכות יחסית.'},
+    { id: 'lightning', name: 'ברק', col: '#f1c40f', maxHp: 90, hpRegen: 0, speed: 2.0, jump: 13, maxEn: 100, dmgMult: 1.5, enCostMult: 1.5, pCol: '#f9ca24', desc:'טס כמו זבוב זרע מחשמיל ובועט! יכולות ניוביים מהחלל דופק נזקים עוקציות מטיס. אך דורש המון כוח.'},
+    { id: 'magma', name: 'לבה', col: '#d35400', maxHp: 150, hpRegen: 0.05, speed: 0.6, jump: 11, maxEn: 100, dmgMult: 1.6, enCostMult: 1.2, pCol: '#eb4d4b', desc:'לוהט כמו התשעים! איטי בקילומטרי משוכה ענק ירי אקוטי ומנפק משמר למדיי נדרופינלית של כעס ודיאלוצקשיה.'},
+    { id: 'light', name: 'אור', col: '#ffffb3', maxHp: 100, hpRegen: 0.02, speed: 1.0, jump: 14, maxEn: 300, dmgMult: 0.9, enCostMult: 0.8, pCol: '#fff200', desc:'בעל עומסי אוטופינקי שכל כלי נכנסים ומפרקים אנרגיה , מקצי אולפנה עולמית לחסרי מעצורים!'},
+    { id: 'dark', name: 'חושך', col: '#8e44ad', maxHp: 85, hpRegen: 0, speed: 1.2, jump: 14, maxEn: 120, dmgMult: 1.0, enCostMult: 1.0, pCol: '#9b59b6', desc:'שודד ערים מוציאות עם *ערפדות* מקבל רגעי אילנויסט חיסור בבריאה בזמן שהקליעות הורגות מטרות של אנטי'}
 ];
 
 function createSelectMenu() {
@@ -177,28 +163,23 @@ function createSelectMenu() {
     });
 }
 
-// Global Core
 const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
 document.body.appendChild(canvas);
 window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; ctx.imageSmoothingEnabled=false; }); window.dispatchEvent(new Event('resize'));
 
-// Engine State variables 
 let p_class = null; let pl, e_arr=[], pr_arr=[], p_pr=[], fx=[];
 let currentMap = MAPS[1]; let wave = 1; let f=0; let shakeV=0, camX=0;
-let isPaused = false; // System Boolean
+let isPaused = false; 
 
-function doShake(amt){shakeV=amt*4;} // Stronger impacts! 
+function doShake(amt){shakeV=amt*4;} 
 
-// SYSTEM CALL FOR PAUSE! 
 function togglePause() {
-    if(!pl || pl.hp<=0 || wave>20) return; // Prevent abusing in menus/end screens.
+    if(!pl || pl.hp<=0 || wave>20) return; 
     isPaused = !isPaused;
     let sScreen = document.getElementById('pause-screen');
-    if(isPaused) {
-         sScreen.classList.remove('hidden');
-    } else {
+    if(isPaused) { sScreen.classList.remove('hidden'); } 
+    else {
          sScreen.classList.add('hidden');
-         // נקה לחיצות הישן בזמן ששחקנו את הפעמון במסך שמח (מונע פיצוץ נזק משובץ כבד בזמן סוף ערוץ עומסי המסוק)
          for(let key in activeKeys) activeKeys[key] = false; 
     }
 }
@@ -213,6 +194,9 @@ class Player {
         this.maxEn=c.maxEn; this.en=this.maxEn;
         this.facing = 1; this.grounded = false; this.target = null;
         this.lockKeyTriggered = false; this.atkWait = {}; this.jCount = 0;
+        
+        // התוספת לה שחיכינו לה ששברה את המשחק לפני - זמני בלתי פגיע! 
+        this.iFrames = 0; 
     }
 
     upd() {
@@ -220,8 +204,11 @@ class Player {
         this.hp = Math.min(this.hp + this.c.hpRegen, this.maxHp);
         let chrg = kd('KeyU');
         
+        // הורדת זמן החסינות פריימטרית
+        if(this.iFrames > 0) this.iFrames--;
+
         let applySpeed = this.c.speed;
-        if(chrg) applySpeed *= 0.35; // מאט את הזרק קשירה! !
+        if(chrg) applySpeed *= 0.35; 
         
         if(kd('KeyA')){ this.vx-=applySpeed; this.facing=-1; }
         if(kd('KeyD')){ this.vx+=applySpeed; this.facing= 1; }
@@ -236,7 +223,6 @@ class Player {
             }
         } else { this.jHold=false;}
 
-        // משיכה פלאנטומאט כושר! (Y KEY) ! 
         if(chrg) {
             this.en = Math.min(this.en + 1.2, this.maxEn);
             makeFX(this.x+this.w/2, this.y+this.h/2, 1, this.c.pCol, 'beam');
@@ -244,10 +230,9 @@ class Player {
             this.sHand('KeyH', '1', 8 * this.c.enCostMult, 12 * this.c.dmgMult, 8);
             this.sHand('KeyJ', '2', 20 * this.c.enCostMult, 30 * this.c.dmgMult, 15);
             this.sHand('KeyK', '3', 45 * this.c.enCostMult, 70 * this.c.dmgMult, 25);
-            this.sHand('KeyY', 'u', 100 * this.c.enCostMult, 300 * this.c.dmgMult, 50); // Mosh ultimate force ! ! 
+            this.sHand('KeyY', 'u', 100 * this.c.enCostMult, 300 * this.c.dmgMult, 50); 
         }
 
-        // ---  (Lockon logic upgraded!!!) 
         if(kd('KeyE')){
             if(!this.lockKeyTriggered){ this.swLock(); this.lockKeyTriggered=true;}
         } else {this.lockKeyTriggered=false;}
@@ -257,9 +242,8 @@ class Player {
              this.findBestTarget();
         }
 
-        // קירות וחפיסי החשיבות החמישית הדינמיקס קריפי פאנזי פאקן (Walls limitation inside Map! !!) 
         this.vy += 0.6; this.x+=this.vx; this.y+=this.vy; this.vx *= 0.8;
-        if(this.x < 10){this.x=10; this.vx=0;} // סוגר מיפלט רמות עיוות! 
+        if(this.x < 10){this.x=10; this.vx=0;} 
 
         let isG=false; let floor_lvl = canvas.height-80;
         if(this.y+this.h > floor_lvl){
@@ -272,7 +256,6 @@ class Player {
                }
             });
         }
-        
         if(isG){this.jCount=0; this.grounded=true;} else{this.grounded=false;}
     }
 
@@ -287,7 +270,7 @@ class Player {
                          x: this.facing>0? this.x+this.w : this.x, y: this.y+20, 
                          dir: this.facing, s:speed, dmg:dmg, size: size * (this.c.id==='magma'? 1.8:1), color: this.c.pCol, tgt: this.target
                     });
-                    this.vx -= (cost/5)*this.facing; // Heavy impact blow 
+                    this.vx -= (cost/5)*this.facing; 
                 }
                 this.atkWait[k] = true;
             }
@@ -309,6 +292,12 @@ class Player {
 
     draw() {
         ctx.save(); ctx.translate(this.x, this.y);
+        
+        // --- אם בזמן "I-Frames", החל טשטוש היבהוב לשחקן!---
+        if(this.iFrames > 0 && Math.floor(f / 4) % 2 === 0){
+             ctx.globalAlpha = 0.4;
+        }
+
         ctx.fillStyle = this.c.col; 
         if(this.en > 90) { ctx.shadowBlur = 15; ctx.shadowColor = this.c.col; }
         ctx.fillRect(0,0,this.w,this.h);
@@ -317,34 +306,32 @@ class Player {
         ctx.fillStyle='rgba(255,255,255,0.8)'; 
         if(this.facing>0) ctx.fillRect(this.w-4, 0, 4, this.h); else ctx.fillRect(0,0,4,this.h);
 
-        // תוספות נעילה פאלי סטיף.
+        // הנעילה האגדית 
         if(this.target){
              let rx = this.target.x + this.target.w/2 - this.x; let ry = this.target.y+this.target.h/2 - this.y;
              ctx.strokeStyle='#ff3838'; ctx.lineWidth=3; 
              ctx.beginPath(); ctx.moveTo(this.w/2, this.h/2); ctx.lineTo(rx,ry); ctx.stroke();
              ctx.beginPath(); ctx.arc(rx,ry, 25+Math.sin(f/4)*5,0,Math.PI*2); ctx.stroke();
         }
+
+        ctx.globalAlpha = 1.0; // מחזירים מצב נורמלי 
         ctx.restore();
     }
 }
 
-
-/* - הלבשנו עוד זיהום סביבתי מסלסקי אסטרה! האויבים הגדומיסטים. */
 class Enemy {
     constructor(x, ty) {
-        this.x=x; this.y=10; this.ty = ty; // melee, shooter, jumper, tank, ninja, summoner
+        this.x=x; this.y=10; this.ty = ty; 
         this.w = 40; this.h=50; this.vx=0; this.vy=0; 
-        
         this.maxHp = 40 + (wave*15); this.s = 2; this.stateT = 100;
         
-        // Configuration classes of Enemies Type Mapping Matrix
         if(ty==='boss'){ this.maxHp *= 18; this.w=120; this.h=120; this.s=1;}
         else if(ty==='shooter'){ this.col = '#f39c12'; this.s=1.5;}
-        else if(ty==='jumper'){ this.col = '#8e44ad'; this.s=2; }
+        else if(ty==='jumper'){ this.col = '#8e44ad'; this.s=2.5; }
         else if(ty==='tank'){ this.col='#7f8c8d'; this.w=60; this.h=75; this.maxHp*=3; this.s=0.5; }
         else if(ty==='ninja'){ this.col='#00cec9'; this.w=30; this.h=45; this.maxHp*=0.6; this.s=2.5; this.stateT=80;}
         else if(ty==='summoner'){ this.col='#341f97'; this.w=40; this.h=60; this.maxHp*=0.9; this.s=1.2;}
-        else { this.col = '#c23616'; } // Normal Melee default !
+        else { this.col = '#c23616'; } 
         
         this.hp = this.maxHp;
         this.shClock = Math.random()*80 + 20; 
@@ -353,15 +340,14 @@ class Enemy {
     upd() {
         let dx = pl.x - this.x; let flY = canvas.height-80;
         
-        // Behavior Branches (שונה ועודכן!)
         if(this.ty === 'melee' || this.ty === 'boss' || this.ty === 'tank'){
             if(Math.abs(dx)>2) this.vx = dx>0? this.s:-this.s;
             if(this.ty==='boss' && Math.random()<0.02 && e_arr.length<5) { e_arr.push(new Enemy(this.x, 'jumper')); }
         }
         else if(this.ty === 'ninja'){
             this.stateT--;
-            if(this.stateT > 20) { this.vx = dx>0? this.s:-this.s; } // פועם כמו אווילי נמושות כבד רץ בספיד הירד רעמי
-            else if(this.stateT > 0) { this.vx = dx>0? 12:-12; } // Dash אטרקטיבי פקודת דאש דורק! !
+            if(this.stateT > 20) { this.vx = dx>0? this.s:-this.s; } 
+            else if(this.stateT > 0) { this.vx = dx>0? 14:-14; } 
             else { this.stateT = Math.random()*50 + 80; } 
         }
         else if(this.ty === 'shooter'){
@@ -376,37 +362,38 @@ class Enemy {
              this.shClock--; if(this.shClock<=0 && this.y+this.h>=flY){ this.vy = -12; this.shClock=70;}
         }
         else if(this.ty === 'summoner') {
-             // בורח ממך אחורה אם קרוב!! סמנר עוצמתי גמביט מוג! (Fleeing mechanism!!! )
              if(Math.abs(dx) < 600) { this.vx = dx>0 ? -this.s : this.s; } 
-             else { this.vx*=0.9; } // Stays calm and waits..
-             
+             else { this.vx*=0.9; } 
              this.shClock--;
              if(this.shClock<=0 && e_arr.length<8) {
                  this.shClock = 250; 
-                 // בומבר קבוע לאמצע הגדר שלו.
                  e_arr.push(new Enemy(this.x+50, 'melee')); 
                  makeFX(this.x+50, this.y, 15, '#c8d6e5', 'boom');
              }
         }
 
-        // Physic constraints bounding  
         this.vy+=0.6; this.y+=this.vy; this.x+=this.vx;
         if(this.x < 10) { this.x=10; this.vx= (this.ty==='summoner') ? this.s : 2; } 
         if(this.y+this.h > flY) { this.y=flY-this.h; this.vy=0; }
         
-        // מכת זדון מהיצור.. מגה גוף אילולי תנשא
-        if(intersect(this,pl)){
-            pl.hp -= (this.ty==='boss'||this.ty==='tank') ? 3 : 0.8; 
-            pl.vx = dx<0 ? 8 : -8; doShake(1.5);
+        // כאן הקסם: שיניתי כך שנזק מופעל אך ורק כשהשחקן איננו "חסין". והרמתי את הנזק הסטטי! 
+        if(intersect(this,pl) && pl.iFrames <= 0){
+             let damagePerHit = (this.ty === 'boss' || this.ty === 'tank') ? 25 : 12;
+             pl.hp -= damagePerHit; 
+             // דוחף גם אחורה וגם קפיצה מיניאטורית מעלה בשביל זווית שיגור למיליוט
+             pl.vx = dx<0 ? 10 : -10;
+             pl.vy = -5;  
+             pl.iFrames = 45; // מספק לו שתיקה מחלונאית שלא יהרג ברצף ל60 מחצי
+             doShake(2.5);
         }
     }
+
     draw(){
         ctx.fillStyle = this.col; ctx.fillRect(this.x,this.y,this.w,this.h);
         
-        // הילוכית ייחודיות מיושנות - שבלול שקיקים קרוסי גראפיקו לזהות !
-        if(this.ty==='tank') { ctx.fillStyle='black'; ctx.fillRect(this.x+5,this.y+5, this.w-10, 10); } // armor plating effect
-        if(this.ty==='ninja'){ ctx.fillStyle='red'; ctx.fillRect(this.x, this.y+8, this.w, 5); } // headband 
-        if(this.ty==='summoner') { ctx.fillStyle='cyan'; ctx.beginPath(); ctx.arc(this.x+20,this.y-10,8,0,Math.PI*2); ctx.fill();} // halo / gem magic
+        if(this.ty==='tank') { ctx.fillStyle='black'; ctx.fillRect(this.x+5,this.y+5, this.w-10, 10); } 
+        if(this.ty==='ninja'){ ctx.fillStyle='red'; ctx.fillRect(this.x, this.y+8, this.w, 5); } 
+        if(this.ty==='summoner') { ctx.fillStyle='cyan'; ctx.beginPath(); ctx.arc(this.x+20,this.y-10,8,0,Math.PI*2); ctx.fill();} 
 
         ctx.fillStyle='#111'; ctx.fillRect(this.x, this.y-10, this.w, 5);
         ctx.fillStyle='red'; ctx.fillRect(this.x, this.y-10, this.w*(this.hp/this.maxHp), 5);
@@ -420,7 +407,6 @@ function makeFX(x,y,qty,col,mode) {
     for(let i=0;i<qty;i++) fx.push({ x:x, y:y, vx:(Math.random()-0.5)*(mode==='boom'?12:4), vy:(mode==='beam')?-(Math.random()*6): (Math.random()-0.5)*(mode==='boom'?12:4), col:col, l: (mode==='spark')?15:25, s: (mode==='boom')?Math.random()*6+4 : 3});
 }
 
-// מחשב הקצאת משנה לשלב 1 על 2 סובין .. 
 function loadWv() {
     let oldWave = wave; currentMap = MAPS[wave > 20 ? 20 : wave];
     fetch('/save',{method:'POST',headers:{'Content-Type':'application/json'}, body:JSON.stringify({stage:wave, shards:20})});
@@ -452,10 +438,9 @@ function startMission(charConfig) {
 }
 
 function sysLoop() {
-    // השתק גנרי מודע מפוז פקקט ( PAUSE GUARD !!! ) !!! !
     if(isPaused){
          requestAnimationFrame(sysLoop); 
-         return; // Skipped execution until unpaused !
+         return; 
     }
 
     f++;
@@ -468,16 +453,31 @@ function sysLoop() {
     pl.upd();
     if(e_arr.length===0){ wave++; pl.hp = Math.min(pl.hp+(pl.maxHp*0.3), pl.maxHp); loadWv(); }
     
-    // UPDATING BACKWARDS (Prevent skip loop glitch!!)
     for(let i=e_arr.length-1; i>=0; i--) { 
         let e = e_arr[i]; e.upd(); 
         if(e.hp<=0) {makeFX(e.x+20,e.y+20,30,'#27ae60','boom'); e_arr.splice(i,1);} 
     }
+
+    // הריע קלע האויב מעבד גם I frames
     for(let i=pr_arr.length-1; i>=0; i--) { 
          let b = pr_arr[i]; b.x+=b.dx; b.y+=b.dy; makeFX(b.x,b.y, 1, 'orange', 'spark'); 
-         if(intersect({x:b.x,y:b.y,w:8,h:8}, pl)) { pl.hp-=14; pr_arr.splice(i,1); doShake(3); continue; }
+         
+         if(intersect({x:b.x,y:b.y,w:8,h:8}, pl)) {
+             // הוא פגע בגבול של הדמות שלך: בדוק אם נחסין  
+             if (pl.iFrames <= 0) { 
+                 pl.hp-=15; 
+                 pl.iFrames = 45; // מציל מספאם
+                 pl.vx += b.dx > 0 ? 5 : -5;
+                 doShake(3); 
+             }
+             // למחוק כדור גם ככה אם הוא תקע שחקן קופסא..
+             pr_arr.splice(i,1);
+             continue;
+         }
+         
          if(b.y>canvas.height || b.x<camX || b.x>camX+canvas.width*2) pr_arr.splice(i,1);
     }
+    
     for(let i=p_pr.length-1; i>=0; i--) {
         let b = p_pr[i]; 
         if(b.tgt && b.tgt.hp>0){
@@ -502,7 +502,6 @@ function sysLoop() {
 
     for(let i=fx.length-1; i>=0; i--) { fx[i].x+=fx[i].vx; fx[i].vy+=0.1; fx[i].y+=fx[i].vy; fx[i].l--; if(fx[i].l<=0) fx.splice(i,1); }
     
-    // מצלמת הרגש קוסמונטה
     let cxTar = pl.x - canvas.width/2 + 100; if(cxTar<0) cxTar=0;
     camX += (cxTar-camX)*0.08; 
     let cm_S_X = camX; let cm_S_Y = 0;
@@ -513,7 +512,7 @@ function sysLoop() {
     ctx.fillStyle='rgba(255,255,255,0.06)'; 
     for(let ds=0;ds<60;ds++) { let pxX = ((ds*319)-(camX*0.1))%canvas.width; if(pxX<0)pxX+=canvas.width; ctx.beginPath(); ctx.arc(pxX, (ds*7453)%canvas.height, 2+ds%3, 0,7); ctx.fill();}
     
-    ctx.save(); ctx.translate(-cm_S_X, cm_S_Y); // המערכה השלמות נתלת! 
+    ctx.save(); ctx.translate(-cm_S_X, cm_S_Y); 
     
     // Floor
     ctx.fillStyle = currentMap.floor; ctx.fillRect(cm_S_X - 100, canvas.height-80, canvas.width + 400, 300);
@@ -534,7 +533,6 @@ function sysLoop() {
 
     ctx.restore();
     
-    // סיקלונה של מימוצי הדף מסד ירוק חיובית UI updates!  (Light mode manipulation via Text)  
     document.getElementById('hp-bar').style.width = Math.max(0,(pl.hp/pl.maxHp)*100)+'%';
     document.getElementById('hp-t').innerText = Math.floor(pl.hp)+"/"+pl.maxHp;
     document.getElementById('en-bar').style.width = Math.max(0,(pl.en/pl.maxEn)*100)+'%';
