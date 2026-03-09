@@ -79,7 +79,7 @@ class Engine:
 
     def init_arena(self):
         names = ["אלפא", "בטא", "גמא", "דלתא", "נמסיס", "צללית", "רוח", "זעם"]
-        for i in range(1,5):
+        for i in range(1,8):
             for n in names:
                 bot = {
                     "name": n+f'{i}',
