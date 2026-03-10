@@ -423,4 +423,148 @@ class Enemy {
 }
 
 function makeFX(x,y,qty,col,mode) {
-    for(let i=0;i<qty;i++) fx.push({ x:x, y:y, vx:(Math.random()-0.5)*(mode==='boom'?12:4), vy:(mode==='beam')?-(Math.random()*6): (Math.random()-0.5)*(mode==='boom'?12:4), col:col, l: (mode==='spark')?15:25,
+    for(let i=0;i<qty;i++) fx.push({ x:x, y:y, vx:(Math.random()-0.5)*(mode==='boom'?12:4), vy:(mode==='beam')?-(Math.random()*6): (Math.random()-0.5)*(mode==='boom'?12:4), col:col, l: (mode==='spark')?15:25, s: (mode==='boom')?Math.random()*6+4 : 3});
+}
+
+function loadWv() {
+    let oldWave = wave; currentMap = MAPS[wave > 20 ? 20 : wave];
+    fetch('/save',{method:'POST',headers:{'Content-Type':'application/json'}, body:JSON.stringify({stage:wave, shards:20})});
+    
+    let stI = document.getElementById('stage-info'); stI.innerText = currentMap.name;
+    stI.style.border = `2px solid ${currentMap.bg}`; stI.style.boxShadow = `0 0 10px ${currentMap.bg}`;
+    let aBox = document.getElementById('stage-alert');
+    aBox.innerText = currentMap.is_boss ? "BOSS ARENA LOCKDOWN!" : `STAGE ${wave}`;
+    aBox.style.color = currentMap.is_boss ? "#e74c3c" : "white"; aBox.style.opacity = 1; setTimeout(()=>{ aBox.style.opacity = 0}, 2500);
+
+    e_arr =[]; pr_arr=[]; pl.iFrames=0;
+    
+    // קריטילי מסה לזירות יקום רחבות פי 8. תפרושת מוביות מטורללות לשלב.. מסיבי.. !  
+    if(currentMap.is_boss) {
+        e_arr.push(new Enemy(pl.x + 800, 'boss'));
+    } else {
+        let mQ = 2+Math.floor(wave/2);
+        for(let z=0; z<mQ; z++){
+            let rTy = currentMap.enemies[Math.floor(Math.random() * currentMap.enemies.length)];
+            e_arr.push(new Enemy(pl.x+400+(z*300), rTy));
+        }
+    }
+}
+
+function startMission(charConfig) {
+    p_class = charConfig;
+    document.getElementById('select-screen').classList.add('hidden');
+    document.getElementById('ui-layer').classList.remove('hidden');
+    pl = new Player(charConfig); wave=1; 
+    loadWv(); requestAnimationFrame(sysLoop);
+}
+
+function sysLoop() {
+    if(isPaused){
+         requestAnimationFrame(sysLoop); 
+         return; 
+    }
+
+    f++;
+    if(pl.hp<=0) {
+        document.getElementById('ui-layer').classList.add('hidden');
+        document.getElementById('death-screen').classList.remove('hidden');
+        document.getElementById('final-lvl').innerText=wave; return;
+    }
+    
+    pl.upd();
+    if(e_arr.length===0){ wave++; pl.hp = Math.min(pl.hp+(pl.maxHp*0.3), pl.maxHp); loadWv(); }
+    
+    for(let i=e_arr.length-1; i>=0; i--) { 
+        let e = e_arr[i]; e.upd(); 
+        if(e.hp<=0) {makeFX(e.x+20,e.y+20,30,'#27ae60','boom'); e_arr.splice(i,1);} 
+    }
+
+    for(let i=pr_arr.length-1; i>=0; i--) { 
+         let b = pr_arr[i]; b.x+=b.dx; b.y+=b.dy; makeFX(b.x,b.y, 1, 'orange', 'spark'); 
+         
+         if(intersect({x:b.x,y:b.y,w:8,h:8}, pl)) {
+             if (pl.iFrames <= 0) { 
+                 pl.hp-=15; 
+                 pl.iFrames = 45; 
+                 pl.vx += b.dx > 0 ? 5 : -5;
+                 doShake(3); 
+             }
+             pr_arr.splice(i,1);
+             continue;
+         }
+         
+         if(b.y>canvas.height || b.x<camX || b.x>camX+canvas.width*2) pr_arr.splice(i,1);
+    }
+    
+    for(let i=p_pr.length-1; i>=0; i--) {
+        let b = p_pr[i]; 
+        if(b.tgt && b.tgt.hp>0){
+            let tgAng = Math.atan2((b.tgt.y+b.tgt.h/2)-b.y, (b.tgt.x+b.tgt.w/2)-b.x);
+            b.x += Math.cos(tgAng) * b.s; b.y += Math.sin(tgAng) * b.s;
+        }else{ b.x += b.dir * b.s;}
+        
+        makeFX(b.x,b.y,2, b.color, 'spark');
+
+        let dflag = false;
+        for(let j=e_arr.length-1; j>=0; j--){
+             let te = e_arr[j];
+             if(intersect({x:b.x-b.size/2, y:b.y-b.size/2, w:b.size, h:b.size}, te)) {
+                 te.hp-=b.dmg; makeFX(b.x,b.y,8,b.color,'boom'); dflag=true; doShake((b.dmg)/20);
+                 te.vx += b.dir*6;
+                 if(p_class.id === 'dark'){ pl.hp = Math.min(pl.maxHp, pl.hp+(b.dmg*0.025)); } 
+                 break;
+             }
+        }
+        if(dflag || b.y>canvas.height || Math.abs(b.x-pl.x)>2000) {p_pr.splice(i,1);}
+    }
+
+    for(let i=fx.length-1; i>=0; i--) { fx[i].x+=fx[i].vx; fx[i].vy+=0.1; fx[i].y+=fx[i].vy; fx[i].l--; if(fx[i].l<=0) fx.splice(i,1); }
+    
+    let cxTar = pl.x - canvas.width/2 + 100; if(cxTar<0) cxTar=0;
+    camX += (cxTar-camX)*0.08; 
+    let cm_S_X = camX; let cm_S_Y = 0;
+    if(shakeV>0) {cm_S_X+=(Math.random()-0.5)*shakeV; cm_S_Y+=(Math.random()-0.5)*shakeV; shakeV*=0.8;} if(shakeV<0.5) shakeV=0;
+    
+    ctx.fillStyle = currentMap.bg; ctx.fillRect(0,0, canvas.width, canvas.height);
+    
+    ctx.fillStyle='rgba(255,255,255,0.06)'; 
+    for(let ds=0;ds<60;ds++) { let pxX = ((ds*319)-(camX*0.1))%canvas.width; if(pxX<0)pxX+=canvas.width; ctx.beginPath(); ctx.arc(pxX, (ds*7453)%canvas.height, 2+ds%3, 0,7); ctx.fill();}
+    
+    ctx.save(); ctx.translate(-cm_S_X, cm_S_Y); 
+    
+    // ציור הרצפות הנצחציוט עם רעיפת הבלנד למדרכת אימה. !
+    ctx.fillStyle = currentMap.floor; ctx.fillRect(cm_S_X - 100, canvas.height-80, canvas.width + 400, 300);
+    ctx.strokeStyle='rgba(0,0,0,0.4)';
+    for(let xl=cm_S_X - (cm_S_X % 120); xl < cm_S_X+canvas.width+400; xl+=120){ ctx.beginPath(); ctx.moveTo(xl,canvas.height-80); ctx.lineTo(xl, canvas.height); ctx.stroke(); }
+
+    currentMap.platforms.forEach(pf => {
+         let pY = canvas.height - pf.y_offset;
+         ctx.fillStyle=currentMap.bg; ctx.shadowBlur=10; ctx.shadowColor=currentMap.floor; ctx.fillRect(pf.x, pY, pf.w, pf.h); ctx.shadowBlur=0; 
+         ctx.fillStyle=currentMap.floor; ctx.fillRect(pf.x+3, pY+3, pf.w-6, pf.h-6); 
+    });
+
+    pl.draw(); e_arr.forEach(e=>e.draw()); 
+    ctx.fillStyle='#f39c12'; pr_arr.forEach(b=>{ctx.fillRect(b.x-4,b.y-4,8,8);});
+    p_pr.forEach(b=>{ctx.fillStyle=b.color; ctx.beginPath(); ctx.arc(b.x,b.y,b.size,0,Math.PI*2); ctx.fill();});
+    
+    fx.forEach(x => {ctx.fillStyle=x.col; ctx.globalAlpha=(x.l/25); ctx.fillRect(x.x,x.y,x.s,x.s);}); ctx.globalAlpha=1;
+
+    ctx.restore();
+    
+    document.getElementById('hp-bar').style.width = Math.max(0,(pl.hp/pl.maxHp)*100)+'%';
+    document.getElementById('hp-t').innerText = Math.floor(pl.hp)+"/"+pl.maxHp;
+    document.getElementById('en-bar').style.width = Math.max(0,(pl.en/pl.maxEn)*100)+'%';
+    document.getElementById('en-t').innerText = Math.floor(pl.en)+"/"+pl.maxEn;
+    document.getElementById('lock-hud').style.opacity = pl.target ? 1: 0;
+    
+    requestAnimationFrame(sysLoop);
+}
+
+createSelectMenu();
+</script>
+</body>
+</html>
+"""
+
+if __name__ == "__main__":
+    app.run(port=5009, debug=True)
