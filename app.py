@@ -3,6 +3,12 @@ from werkzeug.serving import run_simple
 from flask import Flask, render_template_string, send_from_directory
 import os
 
+def x():
+    y = Flask(__name__)
+    @y.route('/')
+    def index():return 'google-site-verification: googlebf5e9f4bd69d6b9a.html'
+    return y
+
 # --- 1. דף "בפיתוח" מעוצב ---
 def a(text):
     return f'''
@@ -207,7 +213,7 @@ app = DispatcherMiddleware(main_app, {
     '/game9': game9,
     '/game10': game10,
     '/game11': game11,
-
+    '/googlebf5e9f4bd69d6b9a.html':x(),
     '/php': php_app,
     '/html': html_app,
     '/app1': html_app,
@@ -218,6 +224,7 @@ app = DispatcherMiddleware(main_app, {
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
+
 
 
 
