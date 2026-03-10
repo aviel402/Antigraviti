@@ -80,14 +80,14 @@ GAME_HTML = """
 
 <div id="select-screen" class="screen">
     <h1 class="title">BATTLE HUB</h1>
-    <h2>בחר את הלוחם שלשלוט בהם זה חזק</h2>
+    <h2>בחר את הלוחם שלך</h2>
     <div class="char-grid" id="roster"></div>
 </div>
 
 <div id="pause-screen" class="screen hidden" style="background: rgba(10, 15, 25, 0.9); z-index:9000;">
-    <h1 class="title" style="filter: hue-rotate(90deg); -webkit-text-fill-color:white; margin-bottom: 20px;">הקפאת נתונים פעילה..</h1>
+    <h1 class="title" style="filter: hue-rotate(90deg); -webkit-text-fill-color:white; margin-bottom: 20px;">עצירה</h1>
     <button class="menu-btn" onclick="togglePause()">▶ חזור עכשיו לשדה הקרב</button>
-    <button class="menu-btn" onclick="location.reload()" style="background:#e74c3c; border-color:#e74c3c;">☒ חילוץ עצמי אחורה לתפריט דמויות</button>
+    <button class="menu-btn" onclick="location.reload()" style="background:#e74c3c; border-color:#e74c3c;">☒ איפוס</button>
 </div>
 
 <div id="ui-layer" class="hidden">
@@ -112,10 +112,10 @@ GAME_HTML = """
     <div id="stage-alert">FIGHT!</div>
 
     <div class="glass-panel controls">
-        <div><kbd>W</kbd> <kbd>A</kbd> <kbd>D</kbd> - להתרוצץ בפלטפורמות שעל המסך העצום</div>
-        <div><kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> - טקטיקות לחימה לפי התאמה של מד  |   <kbd>Y</kbd> לחתוך זמני הפעלה ברגע החשוב מ-שלב עשירייה!</div>
-        <div><kbd>U</kbd> איש מים וחסות עילאית תפיח לחיי דמות חיש שבירת יצוריות בעוד ש... </div>
-        <div><kbd>P</kbd> או <kbd>ESC</kbd> להצלת דפים פרימיטיבים ולדמות עצירה ננצח על פי הפגיון הזה תצלוני פאס </div>
+        <div><kbd>W</kbd> <kbd>A</kbd> <kbd>D</kbd> - תזוזות</div>
+        <div><kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> - התקפות  |   <kbd>Y</kbd> מכת סופר (משלב 10)</div>
+        <div><kbd>U</kbd>טעינת אנרגיה</div>
+        <div><kbd>P</kbd> או <kbd>ESC</kbd>עצירת המשחק</div>
     </div>
 </div>
 
@@ -568,3 +568,4 @@ createSelectMenu();
 
 if __name__ == "__main__":
     app.run(port=5009, debug=True)
+
