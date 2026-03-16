@@ -301,3 +301,4 @@ function toggleMobileMode() {
 # ... Flask __main__ block
 if __name__ == "__main__":
     app.run(port=5009, debug=True)
+    
