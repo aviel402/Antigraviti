@@ -1,4 +1,3 @@
-# maps9.py
 def generate_maps():
     maps = {}
     themes =[
@@ -13,7 +12,6 @@ def generate_maps():
         is_boss = (stage % 5 == 0)
         platforms = []
 
-        # בניית פלטפורמות
         if stage % 5 == 1:
             for offset in range(300, 2500, 600): platforms.append({"x": offset, "y_offset": 120, "w": 250, "h": 20})
         elif stage % 5 == 2:
@@ -32,15 +30,19 @@ def generate_maps():
             platforms.append({"x": 1000, "y_offset": 250, "w": 300, "h": 30})
             platforms.append({"x": 1600, "y_offset": 180, "w": 400, "h": 30})
 
+        # היררכיה חדשה כולל אויבים פיקסל ארט ומנגנוני עולמות מאסטרו ! 
         allowed_enemies = ["melee"]
         if stage >= 2: allowed_enemies.append("jumper")
         if stage >= 4: allowed_enemies.append("shooter")
-        if stage >= 7: allowed_enemies.append("tank")      
-        if stage >= 9: allowed_enemies.append("ninja")     
-        if stage >= 11: allowed_enemies.append("summoner") 
+        if stage >= 6: allowed_enemies.append("miner")     # השולפות מהרצפה
+        if stage >= 8: allowed_enemies.append("tank")      
+        if stage >= 11: allowed_enemies.append("sniper")   # מצביעי צלף מאחורי רכזות לייזרים פלאן טוקים קדושות... 
+        if stage >= 13: allowed_enemies.append("ghost")    # רוחות הרפאים האסתיניות... יריחו עולים מפאצמפלו עומדות קיר  !  
+        if stage >= 16: allowed_enemies.append("ninja")     
+        if stage >= 18: allowed_enemies.append("summoner") 
 
         maps[stage] = {
-            "name": f"{themes[theme_index]['name']} - Sector {stage % 5 if stage % 5 != 0 else 5}",
+            "name": "BOSS OVERSEER PROTOCOL" if is_boss else f"{themes[theme_index]['name']} - Section {stage % 5 if stage % 5 != 0 else 5}",
             "bg": themes[theme_index]["bg"],
             "floor": themes[theme_index]["floor"],
             "platforms": platforms,
