@@ -12,37 +12,39 @@ def generate_maps():
         is_boss = (stage % 5 == 0)
         platforms = []
 
+        # מערך עיצובי לפלטפורמות בשלב (מרחיב טווח עמוק לעד 3000 קואורדינאטות).
         if stage % 5 == 1:
-            for offset in range(300, 2500, 600): platforms.append({"x": offset, "y_offset": 120, "w": 250, "h": 20})
+            for offset in range(300, 2800, 600): platforms.append({"x": offset, "y_offset": 120, "w": 250, "h": 20})
         elif stage % 5 == 2:
-            for offset in range(300, 2500, 800):
+            for offset in range(300, 2800, 800):
                 platforms.append({"x": offset, "y_offset": 110, "w": 100, "h": 20})
                 platforms.append({"x": offset+150, "y_offset": 180, "w": 100, "h": 20})
+                platforms.append({"x": offset+300, "y_offset": 250, "w": 150, "h": 20})
         elif stage % 5 == 3:
-            for offset in range(400, 2500, 1000):
-                platforms.append({"x": offset, "y_offset": 120, "w": 400, "h": 20})
-                platforms.append({"x": offset+200, "y_offset": 220, "w": 400, "h": 20})
+            for offset in range(400, 2800, 900):
+                platforms.append({"x": offset, "y_offset": 140, "w": 350, "h": 20})
+                platforms.append({"x": offset+200, "y_offset": 280, "w": 350, "h": 20})
         elif stage % 5 == 4:
-            for offset in range(300, 2500, 400):
-                platforms.append({"x": offset, "y_offset": 140 if offset % 800 == 0 else 240, "w": 120, "h": 20})
-        elif is_boss:
-            platforms.append({"x": 400, "y_offset": 180, "w": 400, "h": 30})
-            platforms.append({"x": 1000, "y_offset": 250, "w": 300, "h": 30})
-            platforms.append({"x": 1600, "y_offset": 180, "w": 400, "h": 30})
+            for offset in range(300, 2800, 350):
+                platforms.append({"x": offset, "y_offset": 150 if offset % 700 == 0 else 250, "w": 120, "h": 20})
+        elif is_boss: # פלטפורמות סטטוס קרב עבור הבאסים
+            platforms.append({"x": 300, "y_offset": 160, "w": 250, "h": 20})
+            platforms.append({"x": 900, "y_offset": 250, "w": 800, "h": 30})
+            platforms.append({"x": 1900, "y_offset": 160, "w": 250, "h": 20})
 
-        # היררכיה חדשה כולל אויבים פיקסל ארט ומנגנוני עולמות מאסטרו ! 
+        # מבנה "איכות העצים" נחשפת בעצמי העכבות: מתחיל ממכות מגעות ודופקות מתעבה ליחס.
         allowed_enemies = ["melee"]
         if stage >= 2: allowed_enemies.append("jumper")
-        if stage >= 4: allowed_enemies.append("shooter")
-        if stage >= 6: allowed_enemies.append("miner")     # השולפות מהרצפה
-        if stage >= 8: allowed_enemies.append("tank")      
-        if stage >= 11: allowed_enemies.append("sniper")   # מצביעי צלף מאחורי רכזות לייזרים פלאן טוקים קדושות... 
-        if stage >= 13: allowed_enemies.append("ghost")    # רוחות הרפאים האסתיניות... יריחו עולים מפאצמפלו עומדות קיר  !  
-        if stage >= 16: allowed_enemies.append("ninja")     
-        if stage >= 18: allowed_enemies.append("summoner") 
+        if stage >= 4: allowed_enemies.append("flyer")     # מעופפים בשמים מצטלבים
+        if stage >= 6: allowed_enemies.append("shooter")   
+        if stage >= 8: allowed_enemies.append("bomber")    # סכנת הפציעות מתקרבת משלב 8. פליקים
+        if stage >= 10: allowed_enemies.append("tank")      
+        if stage >= 13: allowed_enemies.append("ninja")    # שלבים עוקבים, נינגות. 
+        if stage >= 15: allowed_enemies.append("shield")   # מגנים נוזקים ענקית ! חיבים לעקוף קיר
+        if stage >= 17: allowed_enemies.append("summoner") 
 
         maps[stage] = {
-            "name": "BOSS OVERSEER PROTOCOL" if is_boss else f"{themes[theme_index]['name']} - Section {stage % 5 if stage % 5 != 0 else 5}",
+            "name": f"CHAMBER MASTER" if is_boss else f"{themes[theme_index]['name']} - Sec {stage % 5}",
             "bg": themes[theme_index]["bg"],
             "floor": themes[theme_index]["floor"],
             "platforms": platforms,
