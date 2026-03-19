@@ -1,7 +1,8 @@
 import random
 import uuid
+import os
 from flask import Flask, render_template_string, request, jsonify, session, url_for
-import txt11 
+import txt11  # וודא שהקובץ txt11.py נמצא באותה תיקייה
 
 app = Flask(__name__)
 app.secret_key = "fifa_manager_pro_master_key"
@@ -13,7 +14,11 @@ class Player:
     def __init__(self, pos=None):
         self.id = str(uuid.uuid4())
         self.name = f"{random.choice(txt11.FIRST_NAMES)} {random.choice(txt11.LAST_NAMES)}"
+        
+        # עמדה נוכחית (יכולה להשתנות בחילופים)
         self.pos = pos if pos else random.choice(list(set(POSITIONS)))
+        # עמדה טבעית (נשארת קבועה תמיד)
+        self.natural_pos = self.pos 
         
         base = random.randint(65, 88)
         self.ovr = base
@@ -142,15 +147,18 @@ class League:
             "events": events
         }
 
-LEAGUES_DB = {}
+# משתנה גלובלי לאיחסון הליגות (בזכרון ה-RAM של השרת)
+LEAGUES_DB_STORAGE = {}
+
 def get_game():
     uid = session.get('manager_fifa_11_key')
-    if not uid or uid not in LEAGUES_DB:
+    # אם אין סשן או שהשרת עבר ריסטרט והמידע נמחק
+    if not uid or uid not in LEAGUES_DB_STORAGE:
         uid = str(uuid.uuid4())
         session.permanent = True
         session['manager_fifa_11_key'] = uid
-        LEAGUES_DB[uid] = League()
-    return LEAGUES_DB[uid]
+        LEAGUES_DB_STORAGE[uid] = League()
+    return LEAGUES_DB_STORAGE[uid]
 
 @app.route('/')
 def home():
@@ -210,6 +218,7 @@ def swap_players():
     if p1 and p2:
         list1[idx1] = p2
         list2[idx2] = p1
+        # החלפת עמדות במגרש (אבל העמדה הטבעית נשארת איתם)
         temp_pos = p1.pos
         p1.pos = p2.pos
         p2.pos = temp_pos
@@ -261,7 +270,6 @@ def force_restart():
     session.clear()
     return jsonify({"ok":True})
 
-
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -309,18 +317,20 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
 
 .fut-ovr { position: absolute; top: 3px; left: 6px; font-size: 20px; font-weight: bold; line-height: 1;}
 .fut-pos { position: absolute; top: 24px; left: 6px; font-size: 10px; font-weight: bold;}
+/* עמדה טבעית - חדש */
+.fut-nat-pos { position: absolute; top: 3px; right: 6px; font-size: 10px; font-weight: bold; background: rgba(0,0,0,0.2); border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.1);}
+
 .fut-pic { width: 45px; height: 45px; background: rgba(0,0,0,0.1); border-radius: 50%; margin: 5px auto 0; display:flex; justify-content:center; align-items:center; font-size:20px;}
 .fut-name { text-align: center; font-size: 12px; font-weight: bold; margin-top: 5px; border-bottom: 1px solid rgba(0,0,0,0.2); padding-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .fut-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 9px; margin-top: 3px; text-align: center; line-height: 1.2;}
-.fut-status { position: absolute; top:3px; right:3px; font-size:12px; background: rgba(0,0,0,0.7); border-radius:50%; width:20px; height:20px; display:flex; justify-content:center; align-items:center;}
+.fut-status { position: absolute; top:3px; right:3px; font-size:12px; background: rgba(0,0,0,0.7); border-radius:50%; width:20px; height:20px; display:flex; justify-content:center; align-items:center; z-index: 5;}
 
-/* Pitch Layout - ROW BASED FOR PERFECT ALIGNMENT */
+/* Pitch Layout */
 .pitch-container { 
     background: var(--grass); border: 2px solid #fff; border-radius: 10px; 
     display: flex; flex-direction: column; justify-content: space-between;
     padding: 20px 0; min-height: 700px; position: relative; margin-bottom: 20px; overflow:hidden;
 }
-/* Simple Pitch Lines */
 .pitch-container::before { content:''; position:absolute; top:50%; left:0; width:100%; height:2px; background:rgba(255,255,255,0.4); z-index: 1; }
 .pitch-container::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:120px; height:120px; border:2px solid rgba(255,255,255,0.4); border-radius:50%; z-index: 1;}
 
@@ -368,11 +378,9 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
         <button class="tab-b" onclick="goTab('vCal', this)">{{ texts.tabs.calendar }}</button>
     </div>
 
-    <!-- SQUAD / PITCH -->
     <div class="content-box active" id="vSqd">
         <div style="color:var(--gold); margin-bottom:10px; font-weight:bold;">{{ texts.squad_pitch_title }}</div>
         
-        <!-- PITCH ROWS -->
         <div class="pitch-container" id="pitch-ui">
             <div class="pitch-row" id="row-att"></div>
             <div class="pitch-row" id="row-mid"></div>
@@ -384,13 +392,11 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
         <div class="bench-container" id="bench-ui"></div>
     </div>
     
-    <!-- MARKET -->
     <div class="content-box" id="vMkt">
         <p>{{ texts.market_desc }}</p>
         <div class="market-grid" id="r_mkt"></div>
     </div>
     
-    <!-- TABLE -->
     <div class="content-box" id="vTbl">
         <table class="tbl">
              <thead><tr><th>מקום</th><th>קבוצה</th><th>Pts</th><th>מש'</th><th>נצ'</th><th>הפס'</th><th>הפרש</th></tr></thead>
@@ -398,7 +404,6 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
         </table>
     </div>
 
-    <!-- CALENDAR & TRAINING -->
     <div class="content-box" id="vCal">
         <h2 style="color:var(--gold);">מחזור נוכחי: <span id="wwW"></span></h2>
         <hr style="border-color:#334155;">
@@ -444,12 +449,11 @@ async function fireReq(epKey, payload={}, withLoad=true) {
     return rz;
 }
 
-// Player Swap System
 let selectedPlayerId = null;
 function selectPlayer(id) {
     if(!selectedPlayerId) {
         selectedPlayerId = id;
-        _runBld(); // Refresh to show glow
+        _runBld();
     } else {
         if(selectedPlayerId !== id) {
             fireReq('swap', {id1: selectedPlayerId, id2: id});
@@ -483,6 +487,9 @@ function RPlCard(p, mode="pitch") {
         ${getStatusIcon(p)}
         <div class="fut-ovr">${p.ovr}</div>
         <div class="fut-pos">${p.pos}</div>
+        
+        <div class="fut-nat-pos" title="עמדה מקורית">${p.natural_pos}</div>
+
         <div class="fut-pic">👤</div>
         <div class="fut-name">${p.name}</div>
         <div class="fut-stats">
@@ -500,7 +507,6 @@ function BldUi(data) {
    gEl('wwW').innerText = data.week;
    gEl('btn-play').innerText = "{{ texts.btn_play_match }} " + data.week;
    
-   // סידור המגרש בשיטת שורות (Flex Rows)
    let htmlAtt = "", htmlMid = "", htmlDef = "", htmlGk = "";
    
    data.my_team.starting_11.forEach(p => {
@@ -516,11 +522,9 @@ function BldUi(data) {
    gEl('row-def').innerHTML = htmlDef;
    gEl('row-gk').innerHTML = htmlGk;
    
-   // ספסל ושוק
    gEl('bench-ui').innerHTML = data.my_team.bench.map(p => RPlCard(p, "bench_sell")).join('');
    gEl('r_mkt').innerHTML= data.market.map(p => RPlCard(p, "market")).join('');
 
-   // טבלה
    gEl('r_tbl').innerHTML= data.table.map(t=>`
       <tr class="${t.name===data.my_team.name?'tr-my':''}">
           <td>${t.pos}</td> <td>${t.name}</td> <td>${t.pts}</td>
@@ -572,4 +576,5 @@ _runBld();
 """
 
 if __name__ == '__main__':
+    # השתמש ב-debug=False כדי למנוע ריסטארטים של השרת שמוחקים את המידע מהזכרון
     app.run(host='0.0.0.0', port=5000, debug=True)
