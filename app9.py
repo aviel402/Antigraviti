@@ -4,7 +4,7 @@ import maps9
 import txt9
 
 app = Flask(__name__)
-app.secret_key = 'clover_cyber_ninja_v9'
+app.secret_key = 'clover_fast_heroes_v10'
 
 PLAYER_DATA = {"shards": 0, "max_stage_reached": 1}
 
@@ -34,7 +34,7 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON CLOVER</title>
+    <title>NEON CLOVER - SPEED UPDATE</title>
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Jura:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --gold: #00f3ff; --neon-red: #ff003c; --neon-green: #00ff66; --bg-dark: #0a0a0f; }
@@ -68,7 +68,7 @@ GAME_HTML = """
         
         #ui-layer { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:100; display:flex; flex-direction:column; padding:20px; justify-content:space-between; }
         
-        /* Mobile System Override - Small & Transparent */
+        /* Mobile System Override */
         .mobile-ui { position: absolute; bottom: 20px; width: 100%; left: 0; display: none; pointer-events: none; padding: 0 20px; justify-content: space-between; z-index: 150;}
         .mob-left, .mob-right { pointer-events: auto; opacity: 0.5; transform: scale(0.85); transform-origin: bottom; }
         
@@ -144,7 +144,7 @@ GAME_HTML = """
     
     <div id="stage-alert"></div>
     
-    <!-- Mobile UI Fixed: Left movement, Right Action -->
+    <!-- Mobile UI Fixed -->
     <div class="mobile-ui" id="mob-ui">
         <div class="mob-left d-pad">
             <div></div><button class="btn-mob" ontouchstart="mk('KeyW')" ontouchend="rk('KeyW')">W</button><div></div>
@@ -195,15 +195,16 @@ function kd(c) { return activeKeys[c]===true; } function mk(c){activeKeys[c]=tru
 let isMobUI=false; function toggleMobileUI(){isMobUI=!isMobUI; document.getElementById('mob-ui').style.display=isMobUI?'flex':'none';}
 function intersect(a,b){return!(b.x>a.x+a.w || b.x+b.w<a.x || b.y>a.y+a.h || b.y+b.h<a.y);}
 
+// HEROES CONFIG - SPEEDS INCREASED SIGNIFICANTLY!
 const HEROES =[
-    { id: 'earth', col: '#2ecc71', maxHp: 180, hpRegen: 0.01, speed: 1.0, jump: 14, maxEn: 100, dmgMult: 1.2, enCostMult: 1, pCol: '#27ae60'},
-    { id: 'fire', col: '#e74c3c', maxHp: 80, hpRegen: 0, speed: 1.8, jump: 16, maxEn: 120, dmgMult: 1.8, enCostMult: 1, pCol: '#ff7979'},
-    { id: 'water', col: '#3498db', maxHp: 110, hpRegen: 0.15, speed: 1.3, jump: 15, maxEn: 110, dmgMult: 1.0, enCostMult: 1, pCol: '#7ed6df'},
-    { id: 'air', col: '#ecf0f1', maxHp: 90, hpRegen: 0, speed: 2.0, jump: 19, maxEn: 100, dmgMult: 0.8, enCostMult: 0.7, pCol: '#c7ecee'},
-    { id: 'lightning', col: '#f1c40f', maxHp: 90, hpRegen: 0, speed: 2.3, jump: 15, maxEn: 100, dmgMult: 1.5, enCostMult: 1.5, pCol: '#f9ca24'},
-    { id: 'magma', col: '#d35400', maxHp: 160, hpRegen: 0.05, speed: 0.8, jump: 12, maxEn: 100, dmgMult: 1.6, enCostMult: 1.2, pCol: '#eb4d4b'},
-    { id: 'light', col: '#ffffb3', maxHp: 100, hpRegen: 0.02, speed: 1.2, jump: 15, maxEn: 300, dmgMult: 0.9, enCostMult: 0.8, pCol: '#fff200'},
-    { id: 'dark', col: '#8e44ad', maxHp: 85, hpRegen: 0, speed: 1.4, jump: 15, maxEn: 120, dmgMult: 1.0, enCostMult: 1.0, pCol: '#9b59b6'}
+    { id: 'earth', col: '#2ecc71', maxHp: 180, hpRegen: 0.01, speed: 4.0, jump: 15, maxEn: 100, dmgMult: 1.2, enCostMult: 1, pCol: '#27ae60'},
+    { id: 'fire', col: '#e74c3c', maxHp: 80, hpRegen: 0, speed: 6.5, jump: 17, maxEn: 120, dmgMult: 1.8, enCostMult: 1, pCol: '#ff7979'},
+    { id: 'water', col: '#3498db', maxHp: 110, hpRegen: 0.15, speed: 5.0, jump: 16, maxEn: 110, dmgMult: 1.0, enCostMult: 1, pCol: '#7ed6df'},
+    { id: 'air', col: '#ecf0f1', maxHp: 90, hpRegen: 0, speed: 7.0, jump: 20, maxEn: 100, dmgMult: 0.8, enCostMult: 0.7, pCol: '#c7ecee'},
+    { id: 'lightning', col: '#f1c40f', maxHp: 90, hpRegen: 0, speed: 8.5, jump: 16, maxEn: 100, dmgMult: 1.5, enCostMult: 1.5, pCol: '#f9ca24'},
+    { id: 'magma', col: '#d35400', maxHp: 160, hpRegen: 0.05, speed: 3.5, jump: 13, maxEn: 100, dmgMult: 1.6, enCostMult: 1.2, pCol: '#eb4d4b'},
+    { id: 'light', col: '#ffffb3', maxHp: 100, hpRegen: 0.02, speed: 5.5, jump: 16, maxEn: 300, dmgMult: 0.9, enCostMult: 0.8, pCol: '#fff200'},
+    { id: 'dark', col: '#8e44ad', maxHp: 85, hpRegen: 0, speed: 6.0, jump: 16, maxEn: 120, dmgMult: 1.0, enCostMult: 1.0, pCol: '#9b59b6'}
 ];
 
 function createSelectMenu() {
@@ -219,21 +220,91 @@ function createSelectMenu() {
 const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); document.body.appendChild(canvas);
 window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; ctx.imageSmoothingEnabled=false; }); window.dispatchEvent(new Event('resize'));
 
-// --- RETRO SPRITE ENGINE ---
-function drawRetroSprite(context, tx, ty, w, h, primeCol, t_type, hpRatio, phaseFlag, isFaceRight) {
+// --- UNIQUE CHARACTER DESIGNS ---
+function drawPlayerSprite(context, tx, ty, w, h, cId, pCol, isFaceRight, isCrouch, vx) {
     context.save(); context.translate(tx, ty); 
     if(!isFaceRight){ context.scale(-1, 1); context.translate(-w, 0); } 
 
     let bx = 0; let bw = w; 
-    context.fillStyle = '#000'; context.fillRect(bx-2, -2, bw+4, h+4); // Outline
-    context.fillStyle = primeCol; context.fillRect(bx, 0, bw, h); // Main body
+    let walkBounce = Math.abs(vx) > 0.5 ? Math.sin(f/5)*3 : 0;
+    
+    // Shadow
+    context.fillStyle = 'rgba(0,0,0,0.5)'; context.fillRect(bx+5, h-2, bw-10, 4);
+    
+    context.translate(0, walkBounce);
 
-    if (t_type === 'player'){
-        context.fillStyle = '#111'; context.fillRect(bx, h/2, bw, h/2); // pants
-        context.fillStyle = '#fff'; context.fillRect(bx+bw-12, 10, 6, 6); // visor 
-        context.fillStyle = primeCol; context.fillRect(bx-6, 8, 6, 25); // backpack
+    if (cId === 'earth') { // TITAN
+        context.fillStyle = '#4a5d23'; context.fillRect(bx-4, 10, bw+8, h-10); // Massive body
+        context.fillStyle = '#27ae60'; context.fillRect(bx, 0, bw, 15); // Head
+        context.fillStyle = '#2ecc71'; context.fillRect(bx-8, 15, 12, 20); // Pauldron
+        context.fillStyle = '#fff'; context.fillRect(bx+bw-8, 5, 4, 4); // Eye
+    } 
+    else if (cId === 'fire') { // BLAZE
+        context.fillStyle = '#c0392b'; context.fillRect(bx+4, 15, bw-8, h-15); // Slim body
+        context.fillStyle = '#e74c3c'; context.beginPath(); context.arc(bx+bw/2, 10, 10, 0, Math.PI*2); context.fill(); // Round head
+        // Flame hair
+        context.fillStyle = '#f1c40f'; context.beginPath(); context.moveTo(bx+bw/2, 10); context.lineTo(bx+bw/2-5+Math.sin(f/2)*5, -10); context.lineTo(bx+bw/2+5, 5); context.fill();
+        context.fillStyle = '#fff'; context.fillRect(bx+bw/2+2, 5, 4, 4);
     }
-    else if(t_type === 'bomber') {
+    else if (cId === 'water') { // AQUA
+        context.fillStyle = '#2980b9'; context.fillRect(bx, 10, bw, h-10); // Robe
+        context.fillStyle = '#3498db'; context.beginPath(); context.moveTo(bx, 15); context.lineTo(bx+bw/2, 0); context.lineTo(bx+bw, 15); context.fill(); // Hood
+        context.fillStyle = '#111'; context.fillRect(bx+bw/2, 5, 10, 10); // Face hidden
+        context.fillStyle = '#7ed6df'; context.fillRect(bx+bw/2+4, 8, 4, 4); // Glowing eye
+    }
+    else if (cId === 'air') { // ZEPHYR
+        context.fillStyle = '#bdc3c7'; context.fillRect(bx+5, 10, bw-10, h-10); // Agile body
+        context.fillStyle = '#ecf0f1'; context.beginPath(); context.arc(bx+bw/2, 8, 8, 0, Math.PI*2); context.fill(); // Head
+        // Scarf
+        context.fillStyle = '#fff'; context.fillRect(bx-15-Math.sin(f/3)*5, 10, 20, 5);
+        context.fillStyle = '#3498db'; context.fillRect(bx+bw/2+2, 5, 4, 2); // Visor
+    }
+    else if (cId === 'lightning') { // VOLT
+        context.fillStyle = '#111'; context.fillRect(bx+5, 10, bw-10, h-10); // Dark suit
+        context.fillStyle = '#f1c40f'; context.fillRect(bx+5, 0, bw-10, 12); // Yellow helmet
+        // Lightning horns
+        context.beginPath(); context.moveTo(bx+5, 0); context.lineTo(bx-5, -10); context.lineTo(bx+10, -5); context.fill();
+        context.beginPath(); context.moveTo(bx+bw-5, 0); context.lineTo(bx+bw+5, -10); context.lineTo(bx+bw-10, -5); context.fill();
+        context.fillStyle = '#fff'; context.fillRect(bx+bw-8, 4, 6, 4); // Visor
+    }
+    else if (cId === 'magma') { // CORE
+        context.fillStyle = '#8e44ad'; context.fillRect(bx, 5, bw, h-5); // Dark rock body
+        context.fillStyle = '#d35400'; context.fillRect(bx+5, h/2-5, bw-10, 10); // Magma core
+        context.fillStyle = '#eb4d4b'; context.fillRect(bx+bw-10, 10, 6, 6); // Eye
+        if(f%10<5) { context.fillStyle = '#f1c40f'; context.fillRect(bx+10, h/2-2, 4, 4); } // Core pulse
+    }
+    else if (cId === 'light') { // PULSE
+        context.fillStyle = '#fff'; context.fillRect(bx+5, 15, bw-10, h-15); // Bright body
+        context.fillStyle = '#ffffb3'; context.beginPath(); context.arc(bx+bw/2, 10, 9, 0, Math.PI*2); context.fill(); // Head
+        // Halo
+        context.strokeStyle = '#f1c40f'; context.lineWidth=2; ctx.beginPath(); ctx.ellipse(bx+bw/2, -5+Math.sin(f/5)*3, 12, 4, 0, 0, Math.PI*2); ctx.stroke();
+        context.fillStyle = '#f1c40f'; context.fillRect(bx+bw/2+2, 8, 4, 4);
+    }
+    else if (cId === 'dark') { // VOID
+        context.fillStyle = '#2c3e50'; context.fillRect(bx, 10, bw, h-10); // Dark body
+        context.fillStyle = '#8e44ad'; context.fillRect(bx, 15, bw, h-20); // Cloak
+        context.fillStyle = '#111'; context.beginPath(); context.arc(bx+bw/2, 10, 10, 0, Math.PI*2); context.fill(); // Head
+        context.fillStyle = '#ff003c'; context.fillRect(bx+bw/2+4, 8, 4, 4); // Red eye
+    }
+    else {
+        // Fallback
+        context.fillStyle = '#000'; context.fillRect(bx-2, -2, bw+4, h+4); 
+        context.fillStyle = pCol; context.fillRect(bx, 0, bw, h); 
+        context.fillStyle = '#fff'; context.fillRect(bx+bw-12, 10, 6, 6); 
+    }
+
+    context.restore();
+}
+
+function drawEnemySprite(context, tx, ty, w, h, primeCol, t_type, hpRatio, phaseFlag, isFaceRight) {
+    context.save(); context.translate(tx, ty); 
+    if(!isFaceRight){ context.scale(-1, 1); context.translate(-w, 0); } 
+
+    let bx = 0; let bw = w; 
+    context.fillStyle = '#000'; context.fillRect(bx-2, -2, bw+4, h+4); 
+    context.fillStyle = primeCol; context.fillRect(bx, 0, bw, h); 
+
+    if(t_type === 'bomber') {
         let inflate = 1.0 + (1-hpRatio)*0.6; context.scale(1, inflate); 
         context.fillStyle='#d35400'; context.fillRect(bx, h/3, bw, h*0.6); 
         context.fillStyle='#000'; context.fillRect(bx+bw/2, 5, 4, 15); 
@@ -241,17 +312,17 @@ function drawRetroSprite(context, tx, ty, w, h, primeCol, t_type, hpRatio, phase
     }
     else if(t_type === 'shield'){
         context.fillStyle = '#333'; context.fillRect(bx, 5, bw, h); 
-        context.fillStyle = '#fff'; context.fillRect(bw-10, -5, 15, h+10); // Shield
+        context.fillStyle = '#fff'; context.fillRect(bw-10, -5, 15, h+10); 
         context.fillStyle = '#00f3ff'; context.fillRect(bw-6, h/3, 7, 20); 
     }
     else if(t_type === 'ninja'){
         context.fillStyle = '#111'; context.fillRect(bx, 0, bw, h); 
-        context.fillStyle = '#ff003c'; context.fillRect(bx-4, 12, bw+8, 6); // ribbon 
-        context.fillStyle = '#fff'; context.fillRect(bx+bw-8, 14, 4, 4); // eye
+        context.fillStyle = '#ff003c'; context.fillRect(bx-4, 12, bw+8, 6); 
+        context.fillStyle = '#fff'; context.fillRect(bx+bw-8, 14, 4, 4); 
     }
     else if(t_type === 'flyer'){
         context.fillStyle = '#00f3ff'; context.beginPath(); context.arc(bw/2, h/2, w/2, 0, Math.PI*2); context.fill();
-        context.fillStyle='#fff'; context.fillRect(bx-15, h/4, 20, 6); context.fillRect(bx-15, h/1.5, 20, 6); // wings
+        context.fillStyle='#fff'; context.fillRect(bx-15, h/4, 20, 6); context.fillRect(bx-15, h/1.5, 20, 6); 
         context.fillStyle='#ff003c'; context.fillRect(bx+bw-12, h/2-4, 8, 8); 
     }
     else if(t_type === 'boss'){
@@ -261,7 +332,7 @@ function drawRetroSprite(context, tx, ty, w, h, primeCol, t_type, hpRatio, phase
         context.fillStyle = '#000'; context.fillRect(w/2, 20, w/2, 20); 
         context.fillStyle = phaseFlag>2 ? '#fff':'red'; context.fillRect(w/2+10, 25, 10,8); 
         context.fillStyle='#f1c40f'; context.fillRect(-10, 0, 25, 25); 
-        if(phaseFlag>=2) { context.fillStyle='#00f3ff'; context.fillRect(w/2, h/2, w+40, 6); } // laser sword
+        if(phaseFlag>=2) { context.fillStyle='#00f3ff'; context.fillRect(w/2, h/2, w+40, 6); } 
     }
     else {
         context.fillStyle = primeCol; context.fillRect(bx, 0, bw, h);
@@ -328,14 +399,16 @@ class Player {
             this.vx-=(this.chargeI/8)*this.facing; this.chargeI=0; doShake(5);
         }
 
-        let speed = this.c.speed; if(sprt) speed*=2; if(chu || chi || crch) speed*=0.3;
-        if(sprt && this.grounded && f%5===0 && (kd('KeyA')||kd('KeyD'))) makeFX(this.x+10,this.y+this.h, 2, currentMap.neon,'spark');
+        // SPEED MULTIPLIERS!
+        let speed = this.c.speed; 
+        if(sprt) speed*=2.2; // Sprint is much faster now
+        if(chu || chi || crch) speed*=0.4;
+        
+        if(sprt && this.grounded && f%3===0 && (kd('KeyA')||kd('KeyD'))) makeFX(this.x+10,this.y+this.h, 2, currentMap.neon,'spark');
 
-        // Wall collision pre-check horizontal
         let nx = this.x;
         if(kd('KeyA')){nx-=speed; this.facing=-1;} if(kd('KeyD')){nx+=speed; this.facing=1;}
         
-        // Check Walls
         let hitWall = false;
         currentMap.walls.forEach(w => {
             let wx = w.x; let wy = canvas.height - 80 - w.h;
@@ -400,7 +473,8 @@ class Player {
 
     draw() {
         if(this.iFrames>0 && Math.floor(f/4)%2===0) ctx.globalAlpha=0.3;
-        drawRetroSprite(ctx, this.x, this.y, this.w, this.h, this.c.col, 'player', 1.0, 0, this.facing>0);
+        
+        drawPlayerSprite(ctx, this.x, this.y, this.w, this.h, this.c.id, this.c.col, this.facing>0, kd('KeyS'), this.vx);
 
         if(this.chargeI>0){ ctx.fillStyle=this.c.pCol; ctx.beginPath(); ctx.arc(this.x+this.w/2, this.y+this.h/2, this.chargeI/3, 0, Math.PI*2); ctx.fill(); }
         
@@ -418,17 +492,17 @@ class Enemy {
         this.ty=ty; this.w=45; this.h=55; this.isAggro=false;
         this.homeX = x; this.x = x; 
         this.vx=0; this.vy=0; 
-        this.s = 2.0; this.stC=120;
+        this.s = 3.0; this.stC=120; // BASE ENEMY SPEED INCREASED!
         this.maxHp = 60 + (globalStage*25);
         this.c = '#7f8c8d'; this.atkWait = 0; 
         
-        if(ty==='boss'){ this.maxHp=1000+globalStage*200; this.w=90; this.h=110; this.s=1.5;}
-        else if(ty==='tank'){ this.w=65; this.h=85; this.maxHp*=4; this.s=0.6; this.c='#34495e';}
-        else if(ty==='shield'){ this.w=50; this.c='#95a5a6'; this.maxHp*=2;}
-        else if(ty==='bomber'){ this.w=35; this.h=45; this.maxHp*=0.7; this.s=3.5;}
-        else if(ty==='flyer') { this.maxHp*=0.6; this.s=1.8; this.y = canvas.height - 350; } // fixed Y spawn
-        else if(ty==='ninja') { this.maxHp*=0.8; this.s=3.5; }
-        else if(ty==='shooter'){ this.s=1; this.stC = 120 - Math.min(60, globalStage*2); }
+        if(ty==='boss'){ this.maxHp=1000+globalStage*200; this.w=90; this.h=110; this.s=2.0;}
+        else if(ty==='tank'){ this.w=65; this.h=85; this.maxHp*=4; this.s=1.0; this.c='#34495e';}
+        else if(ty==='shield'){ this.w=50; this.c='#95a5a6'; this.maxHp*=2; this.s=2.5;}
+        else if(ty==='bomber'){ this.w=35; this.h=45; this.maxHp*=0.7; this.s=4.5;} // Fast!
+        else if(ty==='flyer') { this.maxHp*=0.6; this.s=2.5; this.y = canvas.height - 350; } 
+        else if(ty==='ninja') { this.maxHp*=0.8; this.s=4.0; } // Very fast
+        else if(ty==='shooter'){ this.s=1.5; this.stC = 120 - Math.min(60, globalStage*2); }
         else { this.c = '#c0392b'; } 
         
         if(this.ty !== 'flyer') this.y = -100;
@@ -442,34 +516,33 @@ class Enemy {
         else {
             if(this.ty==='boss') {
                 if(this.hp/this.maxHp < 0.3) this.phase=3; else if(this.hp/this.maxHp < 0.6) this.phase=2;
-                let curSp = (this.phase===3)? 3 : (this.phase===2)? 2 : 1.2;
+                let curSp = (this.phase===3)? 4.5 : (this.phase===2)? 3.0 : 2.0;
                 this.atkWait--;
                 if(this.phase===1) { if(Math.abs(dx)>20) this.vx=isFDir*curSp; }
                 else if (this.phase===2) { 
                     this.vx = isFDir * curSp; 
-                    if(this.atkWait<=0 && Math.abs(dx)>150){ this.atkWait=90; pr_arr.push({x:this.x+this.w/2, y:this.y+30, dx:isFDir*10, dy:2, age:0}); }
+                    if(this.atkWait<=0 && Math.abs(dx)>150){ this.atkWait=90; pr_arr.push({x:this.x+this.w/2, y:this.y+30, dx:isFDir*12, dy:2, age:0}); }
                 }
                 else if(this.phase===3) { 
-                    if(this.atkWait>0){ this.vx = isFDir*7; } else { this.vx = isFDir*curSp; }
+                    if(this.atkWait>0){ this.vx = isFDir*8; } else { this.vx = isFDir*curSp; }
                     if(f%180===0){ this.atkWait=30; this.vy=-8; makeFX(this.x,this.y,10,varColor('neon-red'),'boom');}
                 }
             }
             else if (this.ty==='flyer'){ this.x += isFDir * this.s; this.y = pl.y - 120 + Math.sin(f/20)*60; }
             else if (this.ty==='bomber') { if(Math.abs(dx)<50) this.dieAndExplode(); this.vx = isFDir * this.s; }
             else if(this.ty==='shield' || this.ty==='tank') { this.vx = isFDir * this.s; }
-            else if (this.ty==='ninja'){ this.atkWait--; if(this.atkWait>20) this.vx = isFDir*1.5; else if(this.atkWait>0){this.vx=isFDir*14; this.vy=-2; } else this.atkWait=100;}
+            else if (this.ty==='ninja'){ this.atkWait--; if(this.atkWait>20) this.vx = isFDir*2.0; else if(this.atkWait>0){this.vx=isFDir*16; this.vy=-2; } else this.atkWait=100;}
             else if (this.ty==='shooter') { this.atkWait--; if(Math.abs(dx)>450) this.vx = isFDir*this.s; else this.vx*=0.8;
-                 if(this.atkWait<=0) { this.atkWait = this.stC; pr_arr.push({x:this.x+20,y:this.y+20, dx:isFDir*10, dy:0, age:0});}
+                 if(this.atkWait<=0) { this.atkWait = this.stC; pr_arr.push({x:this.x+20,y:this.y+20, dx:isFDir*12, dy:0, age:0});}
             }
             else if (this.ty==='summoner') {
-                 if(Math.abs(dx)<600){this.vx = isFDir* -1.5;} else this.vx*=0.8; 
+                 if(Math.abs(dx)<600){this.vx = isFDir* -2.0;} else this.vx*=0.8; 
                  this.atkWait--; if(this.atkWait<=0){ this.atkWait=200; e_arr.push(new Enemy(this.x, 'jumper')); e_arr[e_arr.length-1].isAggro=true; }
             }
-            else if(this.ty==='jumper') { this.vx=isFDir*1.8; this.atkWait--; if(this.atkWait<=0 && this.y+this.h>=flY-20) {this.vy=-14; this.atkWait=80;}}
+            else if(this.ty==='jumper') { this.vx=isFDir*2.5; this.atkWait--; if(this.atkWait<=0 && this.y+this.h>=flY-20) {this.vy=-14; this.atkWait=80;}}
             else { this.vx = isFDir*this.s; } 
         }
 
-        // Horizontal movement & walls
         let nx = this.x + this.vx;
         if(nx < 50) { nx = 50; this.vx*=-1; }
         
@@ -514,8 +587,8 @@ class Enemy {
     }
 
     draw() { 
-        if(!this.isAggro && this.ty==='flyer' && this.y < 0) return; // Hide flyer if sleeping high up
-        drawRetroSprite(ctx, this.x, this.y, this.w, this.h, this.c, this.ty, this.hp/this.maxHp, this.phase, pl.x > this.x); 
+        if(!this.isAggro && this.ty==='flyer' && this.y < 0) return; 
+        drawEnemySprite(ctx, this.x, this.y, this.w, this.h, this.c, this.ty, this.hp/this.maxHp, this.phase, pl.x > this.x); 
         ctx.fillStyle='#000'; ctx.fillRect(this.x, this.y-10, this.w,4); ctx.fillStyle='red'; ctx.fillRect(this.x,this.y-10, this.w*(Math.max(0,this.hp)/this.maxHp), 4);
         if(!this.isAggro && this.ty!=='flyer') { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font="14px Jura"; ctx.fillText("Zzz", this.x+10, this.y-15); }
     }
@@ -540,15 +613,15 @@ function loadStg(s_N) {
     document.getElementById('stage-alert').style.color = tmap.neon;
     document.getElementById('stage-alert').style.opacity = 1; setTimeout(()=>{ document.getElementById('stage-alert').style.opacity=0 }, 2500);
 
-    pl.x = 100; // Reset player
+    pl.x = 100; 
     e_arr=[]; pr_arr=[]; p_pr=[]; drops=[]; pipe=null; cloverChest=null; 
 
     if(tmap.is_boss) { e_arr.push(new Enemy(2000, 'boss')); } 
     else { 
-        let ec = 10 + s_N * 2; // More enemies!
+        let ec = 15 + s_N * 3; // More enemies!
         for(let k=0; k<ec; k++){ 
             let ty=tmap.enemies[Math.floor(Math.random()*tmap.enemies.length)]; 
-            e_arr.push(new Enemy(1500 + Math.random()*8000, ty)); // Spread across 10k
+            e_arr.push(new Enemy(1500 + Math.random()*8000, ty)); 
         } 
     }
     
@@ -578,7 +651,6 @@ function sysLoop() {
     if(cloverChest && cloverChest.hp<=0) { document.getElementById('ui-layer').classList.add('hidden'); document.getElementById('victory-screen').classList.remove('hidden'); return; }
     for(let i=drops.length-1; i>=0; i--) { if(drops[i].upd()) drops.splice(i,1); }
 
-    // Enemy Projectiles (2.5s Homing = 150 frames)
     for(let i=pr_arr.length-1; i>=0; i--){ let b=pr_arr[i]; 
          b.age++;
          if(b.age < 150) {
@@ -592,7 +664,6 @@ function sysLoop() {
          if(b.y>canvas.height || b.x<camX || b.x>camX+canvas.width) pr_arr.splice(i,1);
     }
     
-    // Player Projectiles (Perfect Lock-On)
     for(let i=p_pr.length-1; i>=0; i--){ let b = p_pr[i]; 
         if(b.tgt && b.tgt.hp>0){
              let ta = Math.atan2((b.tgt.y+b.tgt.h/2)-b.y, (b.tgt.x+b.tgt.w/2)-b.x); 
@@ -620,13 +691,11 @@ function sysLoop() {
 
     for(let i=fx.length-1; i>=0; i--) { fx[i].x+=fx[i].vx; fx[i].vy+=0.1; fx[i].y+=fx[i].vy; fx[i].l--; if(fx[i].l<=0) fx.splice(i,1); }
     
-    // Smooth Cam
     let cxT = pl.x - canvas.width/2 + 100; 
     if(cxT<0) cxT=0; if(cxT > STAGE_WIDTH - canvas.width) cxT = STAGE_WIDTH - canvas.width;
     camX += (cxT-camX)*0.08; 
     let S_X = camX, S_Y = 0; if(shakeV>0){ S_X+=(Math.random()-0.5)*shakeV; S_Y+=(Math.random()-0.5)*shakeV; shakeV*=0.8;} if(shakeV<0.4) shakeV=0;
     
-    // Draw
     ctx.fillStyle = currentMap.bg; ctx.fillRect(0,0, canvas.width, canvas.height);
     ctx.fillStyle='rgba(255,255,255,0.05)'; for(let ds=0;ds<60;ds++) { let pX = ((ds*584)-(camX*0.06))%canvas.width; if(pX<0)pX+=canvas.width; ctx.fillRect(pX,(ds*4113)%canvas.height, 4+(ds%2)*2,4+(ds%2)*2); }
     
