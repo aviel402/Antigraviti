@@ -1,7 +1,7 @@
 import random
 import uuid
 from flask import Flask, render_template_string, request, jsonify, session, url_for
-import txt11 # ייבוא הטקסטים שלנו
+import txt11 
 
 app = Flask(__name__)
 app.secret_key = "fifa_manager_pro_master_key"
@@ -15,7 +15,6 @@ class Player:
         self.name = f"{random.choice(txt11.FIRST_NAMES)} {random.choice(txt11.LAST_NAMES)}"
         self.pos = pos if pos else random.choice(list(set(POSITIONS)))
         
-        # בניית מדדי פיפ"א
         base = random.randint(65, 88)
         self.ovr = base
         self.pac = base + random.randint(-15, 10)
@@ -25,7 +24,6 @@ class Player:
         self.dfn = base + random.randint(-20, 10)
         self.phy = base + random.randint(-10, 15)
         
-        # התאמת מדדים לפי עמדה
         if self.pos == "GK":
             self.pac = random.randint(30, 60); self.sho = random.randint(20, 40)
             self.dfn += 15
@@ -34,11 +32,9 @@ class Player:
         elif self.pos in ["ST", "LW", "RW"]:
             self.sho += 10; self.pac += 5; self.dfn -= 20
             
-        # מחיר מתאים לתקציב 100,000
         self.value = int((self.ovr - 60) * 1500) + random.randint(1000, 5000)
         if self.value < 2000: self.value = 2000
         
-        # סטטוסים
         self.injured_weeks = 0
         self.red_card_weeks = 0
 
@@ -60,9 +56,8 @@ class Team:
         self.points = 0; self.games_played = 0; self.wins = 0; self.draws = 0; self.losses = 0
         self.goals_for = 0; self.goals_against = 0
         
-        self.budget = 100000 # מתחילים עם 100 אלף שקל
+        self.budget = 100000 
         
-        # הרכב (11 שחקנים) וספסל (שאר השחקנים)
         self.starting_11 = [Player(pos) for pos in POSITIONS]
         self.bench = [Player() for _ in range(7)]
 
@@ -70,7 +65,7 @@ class Team:
         power = 0
         for p in self.starting_11:
             if p.injured_weeks > 0 or p.red_card_weeks > 0:
-                power += (p.ovr * 0.3) # עונש ענק אם מרכיב פצוע/מורחק
+                power += (p.ovr * 0.3) 
             else:
                 power += p.ovr
         return int(power / 11)
@@ -105,7 +100,6 @@ class League:
         self.week += 1
         self.market = self.market[3:] + [Player() for _ in range(3)]
         
-        # עדכון סטטוסים לשחקני הקבוצה שלי
         my_team = next(t for t in self.teams if t.id == self.my_team_id)
         for p in my_team.starting_11 + my_team.bench:
             p.tick_status()
@@ -130,19 +124,16 @@ class League:
         else: t1.points += 1; t2.points += 1; t1.draws += 1; t2.draws += 1
         
         events = []
-        # סימולציית פציעות וכרטיסים (רק לקבוצה של השחקן כדי שירגיש את זה)
         if t1.id == self.my_team_id or t2.id == self.my_team_id:
             my_team = t1 if t1.id == self.my_team_id else t2
-            # סיכוי לפציעה (15%)
             if random.random() < 0.15:
                 victim = random.choice(my_team.starting_11)
                 victim.injured_weeks = random.randint(1, 3)
                 events.append(f"🚑 {victim.name} נפצע וייעדר {victim.injured_weeks} שבועות!")
-            # סיכוי לאדום (10%)
             if random.random() < 0.10:
                 victim = random.choice(my_team.starting_11)
                 victim.red_card_weeks = 1
-                events.append(f"🟥 {victim.name} קיבל כרטיס אדום ומושעה מהמשחק הבא!")
+                events.append(f"🟥 {victim.name} קיבל אדום ומושעה מהמשחק הבא!")
 
         return {
             "t1": t1.name, "s1": s1,
@@ -205,7 +196,6 @@ def swap_players():
     pid2 = request.json.get('id2')
     my_team = next(t for t in g.teams if t.id == g.my_team_id)
     
-    # חיפוש שחקנים
     p1, p2 = None, None
     idx1, list1 = -1, None
     idx2, list2 = -1, None
@@ -220,7 +210,6 @@ def swap_players():
     if p1 and p2:
         list1[idx1] = p2
         list2[idx2] = p1
-        # החלפת תפקידים במגרש (שלא יהיה שוער בחלוץ)
         temp_pos = p1.pos
         p1.pos = p2.pos
         p2.pos = temp_pos
@@ -309,38 +298,38 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
 
 /* FIFA FUT CARD STYLE */
 .fut-card {
-    width: 130px; height: 190px; background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%);
+    width: 110px; height: 165px; background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%);
     border-radius: 10px; position: relative; padding: 5px; color: #451a03; font-family: 'Oswald', sans-serif;
-    box-shadow: 0 5px 10px rgba(0,0,0,0.5); cursor: pointer; transition: 0.2s; border: 2px solid transparent;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.5); cursor: pointer; transition: 0.2s; border: 3px solid transparent;
 }
 .fut-card.silver { background: linear-gradient(135deg, #e2e8f0, #94a3b8); color: #0f172a;}
 .fut-card.bronze { background: linear-gradient(135deg, #d97706, #92400e); color: #fff;}
-.fut-card:hover, .fut-card.selected { transform: scale(1.05); border-color: #fff; box-shadow: 0 0 15px #fff;}
+.fut-card:hover { transform: scale(1.05); }
+.fut-card.selected { transform: scale(1.1); border-color: #fff; box-shadow: 0 0 20px #fff; z-index: 10;}
 
-.fut-ovr { position: absolute; top: 5px; left: 8px; font-size: 24px; font-weight: bold; line-height: 1;}
-.fut-pos { position: absolute; top: 28px; left: 8px; font-size: 12px; font-weight: bold;}
-.fut-pic { width: 60px; height: 60px; background: rgba(0,0,0,0.1); border-radius: 50%; margin: 10px auto 0; display:flex; justify-content:center; align-items:center; font-size:24px;}
-.fut-name { text-align: center; font-size: 14px; font-weight: bold; margin-top: 5px; border-bottom: 1px solid rgba(0,0,0,0.2); padding-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.fut-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 10px; margin-top: 5px; text-align: center; line-height: 1.2;}
-.fut-status { position: absolute; top:5px; right:5px; font-size:14px; background: rgba(0,0,0,0.7); border-radius:50%; width:20px; height:20px; display:flex; justify-content:center; align-items:center;}
+.fut-ovr { position: absolute; top: 3px; left: 6px; font-size: 20px; font-weight: bold; line-height: 1;}
+.fut-pos { position: absolute; top: 24px; left: 6px; font-size: 10px; font-weight: bold;}
+.fut-pic { width: 45px; height: 45px; background: rgba(0,0,0,0.1); border-radius: 50%; margin: 5px auto 0; display:flex; justify-content:center; align-items:center; font-size:20px;}
+.fut-name { text-align: center; font-size: 12px; font-weight: bold; margin-top: 5px; border-bottom: 1px solid rgba(0,0,0,0.2); padding-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.fut-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 9px; margin-top: 3px; text-align: center; line-height: 1.2;}
+.fut-status { position: absolute; top:3px; right:3px; font-size:12px; background: rgba(0,0,0,0.7); border-radius:50%; width:20px; height:20px; display:flex; justify-content:center; align-items:center;}
 
-/* Pitch Layout */
-.pitch-container { background: var(--grass); border: 2px solid #fff; border-radius: 10px; height: 500px; position: relative; margin-bottom: 20px; overflow:hidden;}
+/* Pitch Layout - ROW BASED FOR PERFECT ALIGNMENT */
+.pitch-container { 
+    background: var(--grass); border: 2px solid #fff; border-radius: 10px; 
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 20px 0; min-height: 700px; position: relative; margin-bottom: 20px; overflow:hidden;
+}
 /* Simple Pitch Lines */
-.pitch-container::before { content:''; position:absolute; top:50%; left:0; width:100%; height:2px; background:rgba(255,255,255,0.4); }
-.pitch-container::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:80px; height:80px; border:2px solid rgba(255,255,255,0.4); border-radius:50%; }
+.pitch-container::before { content:''; position:absolute; top:50%; left:0; width:100%; height:2px; background:rgba(255,255,255,0.4); z-index: 1; }
+.pitch-container::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:120px; height:120px; border:2px solid rgba(255,255,255,0.4); border-radius:50%; z-index: 1;}
 
-.pos-slot { position: absolute; transform: translate(-50%, -50%); display:flex; justify-content:center; align-items:center;}
-/* Positions */
-.pos-GK { bottom: 5%; left: 50%; }
-.pos-CB { bottom: 25%; } .pos-LB { bottom: 25%; left: 15%; } .pos-RB { bottom: 25%; left: 85%; }
-.pos-CM { bottom: 50%; } .pos-CAM { bottom: 65%; left:50%;}
-.pos-LW { top: 20%; left: 20%; } .pos-RW { top: 20%; left: 80%; } .pos-ST { top: 15%; left: 50%; }
+.pitch-row { display: flex; justify-content: center; align-items: center; gap: 15px; width: 100%; z-index: 2; position: relative;}
 
-.bench-container { display: flex; gap: 10px; overflow-x: auto; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;}
+.bench-container { display: flex; gap: 10px; overflow-x: auto; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 8px;}
 
 /* Market & Utils */
-.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px;}
+.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px;}
 .buy-btn, .sell-btn { width:100%; padding:5px; margin-top:5px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;}
 .buy-btn { background: #10b981; color:white; } .sell-btn { background: #ef4444; color:white; }
 
@@ -349,10 +338,10 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
 .tr-my { background: rgba(22, 101, 52, 0.4); font-weight:bold; color:var(--gold);}
 
 .flt-wrap { position:fixed; bottom:0; left:0; width:100%; background:#0f172a; padding:15px; text-align:center; z-index:400; border-top: 1px solid var(--gold);}
-.pl-wk { padding:12px 40px; background: var(--gold); color:#000; font-size:20px; border-radius:30px; font-weight:900; border:none; cursor:pointer;}
+.pl-wk { padding:12px 40px; background: var(--gold); color:#000; font-size:20px; border-radius:30px; font-weight:900; border:none; cursor:pointer; box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);}
 
 /* Overlay */
-#over { position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:900; display:none; flex-direction:column; align-items:center; padding-top:50px;}
+#over { position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:900; display:none; flex-direction:column; align-items:center; padding-top:50px; overflow-y:auto;}
 .match-card { background:#1e293b; padding:20px; border-radius:10px; width:90%; max-width:500px; margin-bottom:15px; text-align:center; border:1px solid #334155;}
 .match-score { font-size:32px; font-family:'Oswald'; font-weight:bold; color:var(--gold); margin:10px 0;}
 .match-events { font-size:14px; color:#f87171; margin-top:10px;}
@@ -361,14 +350,14 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
 <body>
 
 <div id="setup-screen">
-    <h1 style="color:var(--gold); font-size:40px;">{{ texts.title }}</h1>
+    <h1 style="color:var(--gold); font-size:40px; font-family:'Oswald'; letter-spacing:2px;">{{ texts.title }}</h1>
     <p>{{ texts.sub_title }}</p>
     <div id="sel-render" class="grid-teams"></div>
 </div>
 
 <div id="m-body" style="display:none;">
     <div class="header-bar">
-        <h2 id="dynN" style="margin:0;"></h2>
+        <h2 id="dynN" style="margin:0; font-family:'Oswald';"></h2>
         <div class="budget-pod">{{ texts.budget }}<span id="budget">0</span></div>
     </div>
 
@@ -381,9 +370,17 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
 
     <!-- SQUAD / PITCH -->
     <div class="content-box active" id="vSqd">
-        <div style="color:var(--gold); margin-bottom:10px;">{{ texts.squad_pitch_title }}</div>
-        <div class="pitch-container" id="pitch-ui"></div>
-        <div style="color:var(--gold); margin:10px 0;">{{ texts.squad_bench_title }}</div>
+        <div style="color:var(--gold); margin-bottom:10px; font-weight:bold;">{{ texts.squad_pitch_title }}</div>
+        
+        <!-- PITCH ROWS -->
+        <div class="pitch-container" id="pitch-ui">
+            <div class="pitch-row" id="row-att"></div>
+            <div class="pitch-row" id="row-mid"></div>
+            <div class="pitch-row" id="row-def"></div>
+            <div class="pitch-row" id="row-gk"></div>
+        </div>
+
+        <div style="color:var(--gold); margin:10px 0; font-weight:bold;">{{ texts.squad_bench_title }}</div>
         <div class="bench-container" id="bench-ui"></div>
     </div>
     
@@ -396,7 +393,7 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
     <!-- TABLE -->
     <div class="content-box" id="vTbl">
         <table class="tbl">
-             <thead><tr><th>מקום</th><th>קבוצה</th><th>Pts</th><th>משחקים</th><th>נצ'</th><th>הפס'</th><th>הפרש</th></tr></thead>
+             <thead><tr><th>מקום</th><th>קבוצה</th><th>Pts</th><th>מש'</th><th>נצ'</th><th>הפס'</th><th>הפרש</th></tr></thead>
              <tbody id="r_tbl"></tbody>
         </table>
     </div>
@@ -417,9 +414,9 @@ body { margin: 0; background: linear-gradient(to top right, #0f172a, #1e293b); c
 </div>
 
 <div id="over">
-    <h2 style="color:var(--gold);">תוצאות המחזור</h2>
+    <h2 style="color:var(--gold); font-family:'Oswald';">תוצאות המחזור</h2>
     <div id="pOverList" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
-    <button class="pl-wk" onclick="gEl('over').style.display='none'; _runBld();" style="margin-top:20px;">המשך</button>
+    <button class="pl-wk" onclick="gEl('over').style.display='none'; _runBld();" style="margin-top:20px; margin-bottom:50px;">המשך לניהול</button>
 </div>
 
 <script>
@@ -447,12 +444,12 @@ async function fireReq(epKey, payload={}, withLoad=true) {
     return rz;
 }
 
-// מערכת החלפות בקליק
+// Player Swap System
 let selectedPlayerId = null;
 function selectPlayer(id) {
     if(!selectedPlayerId) {
         selectedPlayerId = id;
-        _runBld(); // רענון כדי להראות בחירה
+        _runBld(); // Refresh to show glow
     } else {
         if(selectedPlayerId !== id) {
             fireReq('swap', {id1: selectedPlayerId, id2: id});
@@ -476,8 +473,8 @@ function getStatusIcon(p) {
 function RPlCard(p, mode="pitch") {
     let selClass = selectedPlayerId === p.id ? "selected" : "";
     let btn = "";
-    if(mode === "market") btn = `<button class="buy-btn" onclick="fireReq('transfer', {action:'buy', player_id:'${p.id}'}, true)">קנה ₪${p.value}</button>`;
-    if(mode === "bench_sell") btn = `<button class="sell-btn" onclick="fireReq('transfer', {action:'sell', player_id:'${p.id}'}, true)">מכור ₪${Math.floor(p.value*0.8)}</button>`;
+    if(mode === "market") btn = `<button class="buy-btn" onclick="fireReq('transfer', {action:'buy', player_id:'${p.id}'}, true)">קנה ₪${p.value.toLocaleString()}</button>`;
+    if(mode === "bench_sell") btn = `<button class="sell-btn" onclick="fireReq('transfer', {action:'sell', player_id:'${p.id}'}, true)">מכור ₪${Math.floor(p.value*0.8).toLocaleString()}</button>`;
     
     let onClick = (mode==="pitch" || mode==="bench_sell") ? `onclick="selectPlayer('${p.id}')"` : "";
 
@@ -503,20 +500,24 @@ function BldUi(data) {
    gEl('wwW').innerText = data.week;
    gEl('btn-play').innerText = "{{ texts.btn_play_match }} " + data.week;
    
-   // סידור המגרש - חישוב מיקומים בסיסי לכפילויות (2 בלמים וכו')
-   let pitchHtml = "";
-   let posCounts = {};
+   // סידור המגרש בשיטת שורות (Flex Rows)
+   let htmlAtt = "", htmlMid = "", htmlDef = "", htmlGk = "";
+   
    data.my_team.starting_11.forEach(p => {
-       posCounts[p.pos] = (posCounts[p.pos] || 0) + 1;
-       let offset = posCounts[p.pos] > 1 ? (posCounts[p.pos]===2 ? 20 : -20) : 0; // הסטה קלה לבלמים וקשרים
-       pitchHtml += `<div class="pos-slot pos-${p.pos}" style="margin-left:${offset}%;">${RPlCard(p, "pitch")}</div>`;
+       let card = RPlCard(p, "pitch");
+       if(["ST", "LW", "RW"].includes(p.pos)) htmlAtt += card;
+       else if(["CAM", "CM", "CDM", "LM", "RM"].includes(p.pos)) htmlMid += card;
+       else if(["CB", "LB", "RB"].includes(p.pos)) htmlDef += card;
+       else if(p.pos === "GK") htmlGk += card;
    });
-   gEl('pitch-ui').innerHTML = pitchHtml;
+
+   gEl('row-att').innerHTML = htmlAtt;
+   gEl('row-mid').innerHTML = htmlMid;
+   gEl('row-def').innerHTML = htmlDef;
+   gEl('row-gk').innerHTML = htmlGk;
    
-   // ספסל
+   // ספסל ושוק
    gEl('bench-ui').innerHTML = data.my_team.bench.map(p => RPlCard(p, "bench_sell")).join('');
-   
-   // שוק
    gEl('r_mkt').innerHTML= data.market.map(p => RPlCard(p, "market")).join('');
 
    // טבלה
@@ -547,11 +548,11 @@ async function pDay(btn) {
    let ans = await fireReq('play', {}, false);
    
    gEl('pOverList').innerHTML = ans.map(m=>`
-      <div class="match-card" style="${m.is_mine ? 'border-color:var(--gold);' : ''}">
+      <div class="match-card" style="${m.is_mine ? 'border-color:var(--gold); box-shadow: 0 0 15px rgba(234,179,8,0.2);' : ''}">
           <div style="display:flex; justify-content:space-between; align-items:center; color:#fff;">
-             <div style="flex:1; text-align:right;">${m.t1}</div>
+             <div style="flex:1; text-align:right; font-size:18px;">${m.t1}</div>
              <div class="match-score">${m.s1} - ${m.s2}</div>
-             <div style="flex:1; text-align:left;">${m.t2}</div>
+             <div style="flex:1; text-align:left; font-size:18px;">${m.t2}</div>
           </div>
           ${m.events ? m.events.map(e => `<div class="match-events">${e}</div>`).join('') : ''}
       </div>`
