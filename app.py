@@ -9,30 +9,112 @@ def x():
     def index():return 'google-site-verification: googlebf5e9f4bd69d6b9a.html'
     return y
 
-# --- 1. דף "בפיתוח" מעוצב ---
+# --- 1. דף "בפיתוח" מעוצב משופר ---
 def a(text):
     return f'''
-      <style>
-        body {{
-          margin: 0;
-          font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-          background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-          color: #fff;
-          height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }}
-        .hero {{ text-align: center; padding: 40px 20px; }}
-        h1 {{ font-size: clamp(2rem, 5vw, 3.5rem); margin: 0; font-weight: 700; }}
-        .subtitle {{ margin-top: 16px; font-size: 1.2rem; opacity: 0.85; }}
-      </style>
-      <div class="hero">
-        <div>
+      <!DOCTYPE html>
+      <html lang="he" dir="rtl">
+      <head>
+          <meta charset="UTF-8">
+          <title>{text} - בפיתוח</title>
+          <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;700;900&display=swap" rel="stylesheet">
+          <style>
+            body {{
+              margin: 0;
+              font-family: 'Heebo', sans-serif;
+              background-color: #0a0a0c;
+              background-image: 
+                radial-gradient(circle at 50% 0%, rgba(108, 124, 231, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 50% 100%, rgba(0, 206, 201, 0.15) 0%, transparent 50%);
+              color: #fff;
+              height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+            }}
+            .container {{
+              text-align: center;
+              padding: 50px 40px;
+              background: rgba(30, 30, 36, 0.6);
+              backdrop-filter: blur(16px);
+              -webkit-backdrop-filter: blur(16px);
+              border-radius: 24px;
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 20px rgba(0, 206, 201, 0.1);
+              max-width: 500px;
+              width: 90%;
+              transform: translateY(0);
+              animation: float 6s ease-in-out infinite;
+            }}
+            .icon-wrapper {{
+              font-size: 80px;
+              margin-bottom: 20px;
+              filter: drop-shadow(0 0 20px rgba(0, 206, 201, 0.4));
+            }}
+            h1 {{ 
+              font-size: clamp(2rem, 5vw, 3rem); 
+              margin: 0; 
+              font-weight: 900;
+              background: linear-gradient(90deg, #a29bfe, #00cec9);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+            }}
+            .subtitle {{ 
+              margin-top: 16px; 
+              font-size: 1.2rem; 
+              color: #b2bec3;
+              font-weight: 300;
+            }}
+            .progress-bar {{
+              width: 100%;
+              height: 4px;
+              background: rgba(255,255,255,0.1);
+              border-radius: 4px;
+              margin-top: 30px;
+              overflow: hidden;
+              position: relative;
+            }}
+            .progress-bar::after {{
+              content: '';
+              position: absolute;
+              top: 0; left: 0; height: 100%; width: 40%;
+              background: linear-gradient(90deg, #6c7ce7, #00cec9);
+              border-radius: 4px;
+              animation: loading 2s infinite ease-in-out alternate;
+            }}
+            .back-btn {{
+              display: inline-block;
+              margin-top: 40px;
+              padding: 12px 30px;
+              background: rgba(255, 255, 255, 0.05);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              color: #fff;
+              text-decoration: none;
+              border-radius: 30px;
+              font-weight: 700;
+              transition: all 0.3s ease;
+            }}
+            .back-btn:hover {{
+              background: rgba(255, 255, 255, 0.1);
+              border-color: #00cec9;
+              box-shadow: 0 0 15px rgba(0, 206, 201, 0.3);
+              transform: scale(1.05);
+            }}
+            @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
+            @keyframes loading {{ 0% {{ left: -40%; }} 100% {{ left: 100%; }} }}
+          </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon-wrapper">🚧</div>
           <h1>{text}</h1>
-          <div class="subtitle">🚧 האתר עדיין בפיתוח 🚧</div>
+          <div class="subtitle">המשחק עדיין בשלבי פיתוח במעבדה...</div>
+          <div class="progress-bar"></div>
+          <a href="/" class="back-btn">חזור לתחנה הראשית 🏠</a>
         </div>
-      </div>
+      </body>
+      </html>
     '''
 
 # פונקציית דמה ליצירת אפליקציות חסרות
@@ -44,8 +126,8 @@ def create_dummy_app(text):
     return dummy
 
 
-    # --- 2. ייבוא בטוח של האפליקציות ---
-    # נסה לייבא - אם לא קיים, השתמש בדמה
+# --- 2. ייבוא בטוח של האפליקציות ---
+# נסה לייבא - אם לא קיים, השתמש בדמה
 try: from app1 import app as game1
 except ImportError: game1 = create_dummy_app("משחק 1")
 
@@ -74,10 +156,10 @@ try: from app9 import app as game9
 except ImportError: game9 = create_dummy_app("CLOVER")
 
 try: from app11 import app as game11
-except ImportError: game11 = create_dummy_app("CLOVER")
+except ImportError: game11 = create_dummy_app("Manager PRO")
 
 try: from app10 import app as game10
-except ImportError: game10 = create_dummy_app("CLOVER")
+except ImportError: game10 = create_dummy_app("NEON RIDER")
 
 try: from php import app as php_app
 except ImportError: php_app = create_dummy_app("PHP App")
@@ -101,85 +183,176 @@ MENU_HTML = """
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Arcade Hub</title>
-    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;700;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Station | Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;500;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #6c7ce7;
             --accent: #00cec9;
-            --bg-dark: #0a0a0c;
-            --card-bg: #1e1e24;
-            --glow-primary: rgba(108, 124, 231, 0.4);
-            --glow-accent: rgba(0, 206, 201, 0.4);
+            --bg-dark: #070709;
+            --card-bg: rgba(25, 25, 32, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f5f6fa;
+            --text-sub: #a4b0be;
         }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             background-color: var(--bg-dark);
-            background-image: radial-gradient(circle at 10% 20%, rgb(30, 30, 30) 0%, rgb(10, 10, 12) 90%);
-            color: #dfe6e9;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(108, 124, 231, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(0, 206, 201, 0.08) 0%, transparent 50%),
+                linear-gradient(to bottom, #070709 0%, #111116 100%);
+            color: var(--text-main);
             font-family: 'Heebo', sans-serif;
             text-align: center;
-            padding: 40px 20px;
+            padding: 60px 20px;
             min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header-container {
+            margin-bottom: 70px;
+            position: relative;
         }
 
         h1 {
-            font-size: clamp(2rem, 6vw, 3.5rem);
-            margin: 0 0 10px 0;
-            background: linear-gradient(90deg, #a29bfe, #74b9ff, #00cec9);
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            margin: 0;
+            background: linear-gradient(135deg, #fff, #a29bfe, #00cec9);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 900;
             text-transform: uppercase;
+            letter-spacing: 2px;
+            filter: drop-shadow(0 0 20px rgba(108, 124, 231, 0.3));
         }
 
-        .subtitle { color: #b2bec3; font-size: 1.2rem; margin-bottom: 60px; font-weight: 300; }
+        .subtitle { 
+            color: var(--text-sub); 
+            font-size: 1.3rem; 
+            font-weight: 300; 
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            max-width: 1200px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            max-width: 1300px;
             margin: 0 auto;
+            padding: 0 10px;
         }
 
         .card {
             background: var(--card-bg);
-            border-radius: 20px;
-            padding: 30px 20px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 35px 25px;
             text-decoration: none;
             color: white;
-            transition: all 0.4s;
-            display: flex; flex-direction: column; align-items: center;
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            position: relative; overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            position: relative; 
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        /* פס זוהר עליון בכרטיסייה */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        /* אפקט הברקה במעבר עכבר */
+        .card::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.6s ease;
+            z-index: -1;
         }
 
         .card:hover {
-            transform: translateY(-10px) scale(1.03);
-            border-color: var(--accent);
-            box-shadow: 0 20px 40px rgba(0, 206, 201, 0.2);
-            background: linear-gradient(135deg, #252530 0%, #2a2a35 100%);
+            transform: translateY(-12px);
+            border-color: rgba(0, 206, 201, 0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0, 206, 201, 0.15);
+            background: rgba(35, 35, 45, 0.8);
         }
 
-        .emoji-icon { font-size: 60px; margin-bottom: 15px; filter: drop-shadow(0 0 15px rgba(255,255,255,0.3)); }
+        .card:hover::before { opacity: 1; }
+        .card:hover::after { opacity: 1; transform: scale(1); }
+
+        .emoji-icon { 
+            font-size: 65px; 
+            margin-bottom: 20px; 
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));
+            transition: transform 0.4s ease;
+        }
+
+        .card:hover .emoji-icon {
+            transform: scale(1.15) rotate(5deg);
+        }
         
-        .card h2 { margin: 10px 0; font-size: 1.5rem; font-weight: 700; }
+        .card h2 { 
+            margin: 5px 0 15px 0; 
+            font-size: 1.6rem; 
+            font-weight: 700; 
+            letter-spacing: 0.5px;
+        }
         
         .tag {
-            font-size: 0.85rem; color: #81ecec; background: rgba(129, 236, 236, 0.15);
-            padding: 6px 14px; border-radius: 20px; margin-top: 10px;
+            font-size: 0.85rem; 
+            color: #81ecec; 
+            background: rgba(129, 236, 236, 0.1);
+            padding: 6px 16px; 
+            border-radius: 30px; 
+            font-weight: 500;
             border: 1px solid rgba(129, 236, 236, 0.2);
+            backdrop-filter: blur(5px);
         }
 
-        footer { margin-top: 80px; color: #636e72; font-size: 0.85rem; }
+        footer { 
+            margin-top: 100px; 
+            color: #4b4b5c; 
+            font-size: 0.9rem; 
+            font-weight: 500;
+            padding-bottom: 30px;
+        }
+
+        footer span {
+            color: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .grid { grid-template-columns: 1fr; }
+            body { padding: 40px 15px; }
+            .header-container { margin-bottom: 40px; }
+        }
     </style>
 </head>
 <body>
-    <h1>Arcade Station</h1>
-    <p class="subtitle">בחר את ההרפתקה הבאה שלך</p>
+    <div class="header-container">
+        <h1>Arcade Station</h1>
+        <p class="subtitle">בחר את ההרפתקה הבאה שלך 🎮</p>
+    </div>
 
     <div class="grid">
         <a href="/game1/" class="card"><span class="emoji-icon">🏝️</span><h2>הישרדות</h2><div class="tag">ניהול משאבים</div></a>
@@ -195,7 +368,7 @@ MENU_HTML = """
         <a href="/game11/" class="card"><span class="emoji-icon">⚽</span><h2>Manager PRO</h2><div class="tag">ניהול כדורגל טקטי</div></a>
     </div>
 
-    <footer>&copy; Aviel Aluf x0583289789@gmail.com</footer>
+    <footer>&copy; Aviel Aluf | <span>x0583289789@gmail.com</span></footer>
 </body>
 </html>
 """
@@ -224,14 +397,3 @@ app = DispatcherMiddleware(main_app, {
 if __name__ == "__main__":
     print("🎮 Arcade Station Running at http://localhost:5000")
     run_simple('0.0.0.0', 5000, app, use_reloader=True, use_debugger=True)
-
-
-
-
-
-
-
-
-
-
-
