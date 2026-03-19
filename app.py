@@ -121,14 +121,13 @@ def a(text):
 def create_dummy_app(text):
     dummy = Flask(__name__)
     @dummy.route('/')
-    def index():
-        return a(text)
+    def index():return a(text)
     return dummy
 
 
 # --- 2. ייבוא בטוח של האפליקציות ---
 # נסה לייבא - אם לא קיים, השתמש בדמה
-try: from app1 import app as game1
+try: from app21 import app as game1
 except ImportError: game1 = create_dummy_app("משחק 1")
 
 try: from app2 import app as game2
