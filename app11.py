@@ -411,38 +411,47 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 .content-box.active { display:block; animation: fadeIn 0.4s ease-out;}
 @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
 
-/* FUT CARD STYLE */
+/* 🌟 תיקון העיצוב של כרטיסיית השחקן 🌟 */
 .fut-card {
-    width: 105px; height: 160px; border-radius: 12px; position: relative; padding: 6px; 
-    font-family: 'Oswald', sans-serif; cursor: pointer; transition: all 0.2s; border: 2px solid transparent;
-    display: flex; flex-direction: column; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    width: 115px; /* מעט רחב יותר */
+    min-height: 180px; /* מינימום גובה, יתרחב אוטומטית אם יש כפתור */
+    height: auto;
+    border-radius: 12px; position: relative; padding: 10px 6px; 
+    font-family: 'Oswald', 'Assistant', sans-serif; cursor: pointer; transition: all 0.2s; border: 2px solid transparent;
+    display: flex; flex-direction: column; justify-content: flex-start; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
     user-select: none;
 }
 .card-gold { background: linear-gradient(135deg, #facc15 0%, #a16207 100%); color: #451a03; }
 .card-silver { background: linear-gradient(135deg, #e2e8f0, #64748b); color: #0f172a; }
 .card-bronze { background: linear-gradient(135deg, #d97706, #78350f); color: #fff; }
-.card-gold::before { content:''; position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent); clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); animation: shine 3s infinite; opacity:0; }
-.card-gold:hover::before { opacity: 1; }
-@keyframes shine { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
 
 .fut-card:hover { transform: translateY(-5px) scale(1.03); }
 .fut-card.selected { transform: scale(1.08) translateY(-5px); border-color: #fff; box-shadow: 0 0 25px rgba(255,255,255,0.5); z-index: 20;}
 
-.fut-ovr { position: absolute; top: 4px; left: 8px; font-size: 22px; font-weight: 700; line-height: 1;}
-.fut-pos { position: absolute; top: 26px; left: 8px; font-size: 11px; font-weight: 700;}
-.fut-nat-pos { position: absolute; top: 4px; right: 6px; font-size: 10px; font-weight: bold; background: rgba(0,0,0,0.25); color: #fff; border-radius: 4px; padding: 2px 4px;}
-.fut-age { position: absolute; top: 24px; right: 6px; font-size: 9px; opacity: 0.8;}
+.fut-ovr { position: absolute; top: 6px; left: 8px; font-size: 24px; font-weight: 700; line-height: 1;}
+.fut-pos { position: absolute; top: 28px; left: 8px; font-size: 11px; font-weight: 700;}
+.fut-nat-pos { position: absolute; top: 6px; right: 6px; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.3); color: #fff; border-radius: 4px; padding: 2px 5px;}
+.fut-age { position: absolute; top: 28px; right: 6px; font-size: 10px; opacity: 0.8;}
 
-.fut-pic { width: 40px; height: 40px; background: rgba(0,0,0,0.15); border-radius: 50%; margin: 8px auto 0; display:flex; justify-content:center; align-items:flex-end; font-size:24px; overflow:hidden;}
-.fut-name { text-align: center; font-size: 12px; font-weight: 700; margin-top: 5px; border-bottom: 1px solid rgba(0,0,0,0.15); padding-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.fut-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px; font-size: 10px; margin-top: 4px; text-align: center; font-weight: 500;}
-.fut-status { position: absolute; top:-8px; right:-8px; font-size:14px; background: rgba(0,0,0,0.8); border-radius:50%; width:24px; height:24px; display:flex; justify-content:center; align-items:center; z-index: 5; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+.fut-pic { width: 45px; height: 45px; background: rgba(0,0,0,0.15); border-radius: 50%; margin: 15px auto 4px; display:flex; justify-content:center; align-items:flex-end; font-size:26px; overflow:hidden;}
+
+/* התיקון לטקסט החתוך */
+.fut-name { 
+    text-align: center; font-size: 13px; font-weight: 800; 
+    margin: 8px 0; padding-bottom: 6px; 
+    border-bottom: 1px solid rgba(0,0,0,0.2); 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.fut-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 6px; font-size: 11px; margin-bottom: 8px; text-align: center; font-weight: 600;}
+.fut-status { position: absolute; top:-8px; right:-8px; font-size:16px; background: rgba(0,0,0,0.8); border-radius:50%; width:26px; height:26px; display:flex; justify-content:center; align-items:center; z-index: 5; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
 
 /* Pitch Layout - CSS Grid Setup for 4-3-3 */
 .pitch-container { 
     background: var(--pitch-bg); border: 2px solid rgba(255,255,255,0.2); border-radius: 12px; 
     position: relative; margin-bottom: 25px; padding: 20px;
-    height: 650px; display: grid;
+    height: 700px; display: grid; /* הגדלתי מעט את גובה המגרש כדי שיכיל את הכרטיסים המרווחים */
     grid-template-rows: 1fr 1fr 1fr 1fr;
     grid-template-areas: 
         "att"
@@ -463,8 +472,8 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 .bench-container { display: flex; gap: 12px; overflow-x: auto; padding: 15px; background: var(--bg-panel); border-radius: 12px; border: 1px solid #1e293b;}
 
 /* Buttons & Utils */
-.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 15px;}
-.act-btn { width:100%; padding:6px; margin-top:6px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-family:'Assistant'; transition: 0.2s;}
+.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 15px;}
+.act-btn { width:100%; padding:8px 4px; margin-top:auto; border:none; border-radius:6px; font-weight:800; cursor:pointer; font-family:'Assistant'; transition: 0.2s; font-size: 13px;}
 .act-btn:active { transform: scale(0.95); }
 .buy-btn { background: var(--green); color:white; } .buy-btn:hover{background:#059669;}
 .sell-btn { background: var(--red); color:white; } .sell-btn:hover{background:#dc2626;}
@@ -579,11 +588,20 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 </div>
 
 <script>
+// 🌟 פתרון לניתוב חכם: מזהה אם אנחנו בתוך /game11/ או כל נתיב אחר ומוסיף בהתאם 🌟
+let basePath = window.location.pathname;
+if (!basePath.endsWith('/')) {
+    basePath += '/';
+}
+
 const API = {
-   data: "{{ url_for('get_data') }}", pick: "{{ url_for('pick_team') }}",
-   play: "{{ url_for('play_week') }}", swap: "{{ url_for('swap_players') }}",
-   transfer: "{{ url_for('transfer') }}", train: "{{ url_for('train_team') }}",
-   restart: "{{ url_for('force_restart') }}"
+   data: basePath + "api/data", 
+   pick: basePath + "api/pick_team",
+   play: basePath + "api/play", 
+   swap: basePath + "api/swap",
+   transfer: basePath + "api/transfer", 
+   train: basePath + "api/train",
+   restart: basePath + "api/restart"
 };
 
 function gEl(id){ return document.getElementById(id); }
@@ -672,12 +690,12 @@ function RPlCard(p, mode, index=null) {
     if(mode === "pitch") {
         const expected = ["GK", "LB", "CB", "CB", "RB", "CM", "CM", "CAM", "LW", "ST", "RW"][index];
         if(p.natural_pos !== expected) {
-            expectedPosStr = `<div style="position:absolute; bottom:-25px; left:0; right:0; text-align:center; font-size:10px; color:var(--red); font-weight:bold; background:rgba(0,0,0,0.7); border-radius:4px; padding:2px;">צריך להיות ${expected}</div>`;
+            expectedPosStr = `<div style="position:absolute; bottom:-25px; left:0; right:0; text-align:center; font-size:10px; color:var(--red); font-weight:bold; background:rgba(0,0,0,0.8); border-radius:4px; padding:2px; z-index:10;">צריך להיות ${expected}</div>`;
         }
     }
 
     return `
-    <div style="position:relative;">
+    <div style="position:relative; display:flex; flex-direction:column; height:100%;">
         <div class="${getCardClass(p.ovr)} ${selClass}" ${onClick}>
             ${getStatusIcon(p)}
             <div class="fut-ovr">${p.ovr}</div>
@@ -794,6 +812,5 @@ _runBld();
 </body>
 </html>
 """
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
