@@ -357,6 +357,39 @@ def force_restart():
     session.clear()
     return jsonify({"ok":True})
 
+@app.route('/api/auto_lineup', methods=['POST'])
+def auto_lineup():
+    g = get_game()
+    my_team = next((t for t in g.teams if t.id == g.my_team_id), None)
+    if not my_team:
+        return jsonify({"err": "קבוצה לא נמצאה"})
+
+    # איסוף כל השחקנים (הרכב + ספסל)
+    pool = my_team.starting_11 + my_team.bench
+    # מיון מהשחקן הכי טוב להכי חלש
+    pool.sort(key=lambda x: x.ovr, reverse=True)
+
+    new_11 = []
+    # המערך המבוקש
+    target_formation = ["GK", "LB", "CB", "CB", "RB", "CM", "CM", "CAM", "LW", "ST", "RW"]
+
+    for pos in target_formation:
+        # מחפש את השחקן הכי טוב בסגל שמתאים בול לעמדה הזו
+        match = next((p for p in pool if p.natural_pos == pos), None)
+        if match:
+            new_11.append(match)
+            pool.remove(match)
+        else:
+            # אם אין שחקן פנוי בעמדה הזו, קח את השחקן הכי טוב שנשאר פנוי (ברירת מחדל)
+            best_available = pool.pop(0)
+            new_11.append(best_available)
+
+    # שמירת ההרכב והספסל החדשים
+    my_team.starting_11 = new_11
+    my_team.bench = pool
+
+    return jsonify({"msg": "ההרכב סודר אוטומטית בצורה הטובה ביותר! 🪄", "type": "success"})
+
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -368,7 +401,7 @@ HTML_TEMPLATE = """
 <style>
 :root { 
     --bg-main: #0b0f19; --bg-panel: #151b2b; --gold: #eab308; --gold-glow: rgba(234, 179, 8, 0.4);
-    --green: #10b981; --red: #ef4444; --text-light: #f8fafc; --text-muted: #94a3b8;
+    --green: #10b981; --red: #ef4444; --blue: #3b82f6; --text-light: #f8fafc; --text-muted: #94a3b8;
     --pitch-bg: linear-gradient(0deg, #0e4d25 0%, #166534 50%, #105228 100%);
 }
 body { margin: 0; background: var(--bg-main); color: var(--text-light); font-family: 'Assistant', sans-serif; padding-bottom: 90px; overflow-x: hidden;}
@@ -376,6 +409,14 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg-main); }
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+/* Global Loader (מונע שגיאות רשת בלחיצות כפולות) */
+#global-loader {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99999;
+    display: none; justify-content: center; align-items: center; cursor: wait;
+}
+.spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Header */
 .header-bar { 
@@ -443,11 +484,11 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 .fut-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 6px; font-size: 11px; margin-bottom: 8px; text-align: center; font-weight: 600;}
 .fut-status { position: absolute; top:-8px; right:-8px; font-size:16px; background: rgba(0,0,0,0.8); border-radius:50%; width:26px; height:26px; display:flex; justify-content:center; align-items:center; z-index: 5; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
 
-/* Pitch Layout - CSS Grid Setup for 4-3-3 */
+/* Pitch Layout */
 .pitch-container { 
     background: var(--pitch-bg); border: 2px solid rgba(255,255,255,0.2); border-radius: 12px; 
     position: relative; margin-bottom: 25px; padding: 30px 20px;
-    min-height: 850px; display: grid; /* הוגדל משמעותית כדי להכיל את התוויות בנוחות */
+    min-height: 850px; display: grid; 
     grid-template-rows: 1fr 1fr 1fr 1fr;
     grid-template-areas: "att" "mid" "def" "gk";
     box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
@@ -462,7 +503,6 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 #r-def { grid-area: def; align-items: flex-start;}
 #r-gk { grid-area: gk; align-items: flex-end;}
 
-/* 🌟 סגנון חדש לעמדות במגרש 🌟 */
 .pitch-slot { display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2;}
 .slot-label {
     font-size: 11px; font-weight: 800; background: rgba(0,0,0,0.85); padding: 4px 12px; 
@@ -478,6 +518,9 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 .act-btn:active { transform: scale(0.95); }
 .buy-btn { background: var(--green); color:white; } .buy-btn:hover{background:#059669;}
 .sell-btn { background: var(--red); color:white; } .sell-btn:hover{background:#dc2626;}
+
+.auto-sort-btn { background: var(--blue); color: #fff; width: auto; padding: 6px 15px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; font-family: 'Assistant'; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); transition: 0.3s;}
+.auto-sort-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.5);}
 
 .tbl { width:100%; border-collapse:collapse; background: var(--bg-panel); border-radius:12px; overflow:hidden;}
 .tbl th { background: #1e293b; padding: 15px; text-align: center; color: var(--text-muted); font-weight: 600;}
@@ -510,6 +553,7 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 </head>
 <body>
 
+<div id="global-loader"><div class="spinner"></div></div>
 <div id="toast-container"></div>
 
 <div id="setup-screen">
@@ -535,9 +579,13 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
     </div>
 
     <div class="content-box active" id="vSqd">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <!-- פאנל כותרת ההרכב עם הכפתור החדש -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
             <div style="color:var(--gold); font-weight:800; font-size:18px;">{{ texts.squad_pitch_title }}</div>
-            <div style="font-size:12px; color:var(--text-muted);">לחץ על שני שחקנים להחלפה ביניהם</div>
+            <div style="display:flex; gap: 15px; align-items:center;">
+                <div style="font-size:12px; color:var(--text-muted); display:none; @media(min-width:600px){display:block;}">לחץ על שני שחקנים להחלפה</div>
+                <button class="auto-sort-btn" onclick="autoSortLineup()">🪄 סידור אוטומטי</button>
+            </div>
         </div>
         
         <div class="pitch-container" id="pitch-ui">
@@ -589,16 +637,26 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 </div>
 
 <script>
+// חילוץ הניתוב בצורה בטוחה בלי כפילויות של סלאשים //
 let basePath = window.location.pathname;
 if (!basePath.endsWith('/')) { basePath += '/'; }
+// מוודא שאין סלאשים כפולים בסוף ליתר ביטחון
+basePath = basePath.replace(/\/+$/, '/');
 
 const API = {
-   data: basePath + "api/data", pick: basePath + "api/pick_team",
-   play: basePath + "api/play", swap: basePath + "api/swap",
-   transfer: basePath + "api/transfer", train: basePath + "api/train", restart: basePath + "api/restart"
+   data: basePath + "api/data", 
+   pick: basePath + "api/pick_team",
+   play: basePath + "api/play", 
+   swap: basePath + "api/swap",
+   transfer: basePath + "api/transfer", 
+   train: basePath + "api/train", 
+   restart: basePath + "api/restart",
+   auto_lineup: basePath + "api/auto_lineup"
 };
 
 function gEl(id){ return document.getElementById(id); }
+function showLoader() { gEl('global-loader').style.display = 'flex'; }
+function hideLoader() { gEl('global-loader').style.display = 'none'; }
 
 function showToast(msg, type='info') {
     const container = gEl('toast-container');
@@ -620,17 +678,25 @@ function goTab(vid, btn) {
 }
 
 async function fireReq(epKey, payload={}, withLoad=true) {
+    showLoader(); // מפעיל שכבת הגנה שמורנעת לחיצות כפולות
     let pms = {method: payload ? 'POST' : 'GET'};
-    if(payload && Object.keys(payload).length>0){ pms.body=JSON.stringify(payload); pms.headers={'Content-Type':'application/json'}; }
+    if(payload && Object.keys(payload).length>0){ 
+        pms.body = JSON.stringify(payload); 
+        pms.headers = {'Content-Type':'application/json'}; 
+    }
     try {
         let rx = await fetch(API[epKey], pms); 
+        if(!rx.ok) throw new Error("Server error");
         let rz = await rx.json();
         if(rz.err) showToast(rz.err, 'error'); 
         else if (rz.msg) showToast(rz.msg, rz.type || 'success');
-        if(withLoad) _runBld();
+        if(withLoad) await _runBld(); // הוספנו await כדי לוודא שזה מסתיים לפני הסרת הלואדר
+        hideLoader();
         return rz;
     } catch(e) {
-        showToast("שגיאת תקשורת עם השרת", "error");
+        hideLoader();
+        showToast("שגיאת רשת - השרת עמוס או עושה ריסטארט. נסה שוב.", "error");
+        console.error(e);
     }
 }
 
@@ -647,6 +713,13 @@ function handlePlayerClick(idx, loc) {
             fireReq('swap', {idx1: selPlayer.idx, loc1: selPlayer.loc, idx2: idx, loc2: loc});
             selPlayer = null;
         }
+    }
+}
+
+// קריאה חכמה לסידור אוטומטי
+async function autoSortLineup() {
+    if(confirm('האם אתה רוצה שהעוזר יסדר את ההרכב באופן אוטומטי בצורה הטובה ביותר?')) {
+        await fireReq('auto_lineup', {action: 'auto'});
     }
 }
 
@@ -695,7 +768,7 @@ function RPlCard(p, mode, index=null) {
     </div>`;
 }
 
-function BldUi(data) {
+async function BldUi(data) {
    gEl('dynN').innerHTML = `⚽ ${data.my_team.name}` ;
    gEl('t-power').innerText = `OVR ${data.my_team.power}`;
    
@@ -712,7 +785,6 @@ function BldUi(data) {
    
    const s11 = data.my_team.starting_11;
    
-   // הגדרות מערך ותוויות למגרש
    const FORMATION = ["GK", "LB", "CB", "CB", "RB", "CM", "CM", "CAM", "LW", "ST", "RW"];
    const LABELS = {
        "GK": "שוער (GK)", "LB": "מגן שמאלי (LB)", "CB": "בלם (CB)", "RB": "מגן ימני (RB)",
@@ -727,7 +799,6 @@ function BldUi(data) {
        let isMatch = p.natural_pos === expectedPos;
        let labelColor = isMatch ? "var(--green)" : "var(--red)";
 
-       // עוטף את הכרטיס במשבצת שכוללת תווית עמדה
        let slotHtml = `
        <div class="pitch-slot">
            <div class="slot-label" style="color: ${labelColor}; border: 1px solid ${labelColor};">${labelText}</div>
@@ -759,44 +830,49 @@ function BldUi(data) {
 }
 
 async function _runBld() {
-   let rx = await fetch(API.data); let js = await rx.json();
-   if(js.needs_setup) {
-       gEl('setup-screen').style.display = 'block';
-       gEl('sel-render').innerHTML = js.teams_available.map(tc=>`
-           <div class="team-option" style="background: linear-gradient(145deg, ${tc.c1}22, var(--bg-panel)); border-bottom: 5px solid ${tc.c2};" onclick="fireReq('pick',{team_id:'${tc.id}'})">
-              <div style="width:60px; height:60px; background:${tc.c1}; border:3px solid ${tc.c2}; border-radius:50%; margin:0 auto 15px;"></div>
-              <div style="font-weight:800; font-size:22px; color:#fff;">${tc.name}</div>
-           </div>
-       `).join('');
-   } else {
-       gEl('setup-screen').style.display = 'none'; gEl('m-body').style.display = 'block'; BldUi(js);
+   try {
+       let rx = await fetch(API.data); 
+       if(!rx.ok) return;
+       let js = await rx.json();
+       if(js.needs_setup) {
+           gEl('setup-screen').style.display = 'block';
+           gEl('sel-render').innerHTML = js.teams_available.map(tc=>`
+               <div class="team-option" style="background: linear-gradient(145deg, ${tc.c1}22, var(--bg-panel)); border-bottom: 5px solid ${tc.c2};" onclick="fireReq('pick',{team_id:'${tc.id}'})">
+                  <div style="width:60px; height:60px; background:${tc.c1}; border:3px solid ${tc.c2}; border-radius:50%; margin:0 auto 15px;"></div>
+                  <div style="font-weight:800; font-size:22px; color:#fff;">${tc.name}</div>
+               </div>
+           `).join('');
+       } else {
+           gEl('setup-screen').style.display = 'none'; gEl('m-body').style.display = 'block'; await BldUi(js);
+       }
+   } catch(e) {
+       console.error("Fetch data error:", e);
    }
 }
 
 async function pDay(btn) {
-   btn.disabled=true; 
    let originalText = btn.innerText;
    btn.innerText = "משחק מתקיים... ⚽";
    
    let ans = await fireReq('play', {}, false);
-   
-   gEl('pOverList').innerHTML = ans.map(m=>`
-      <div class="match-card" style="${m.is_mine ? 'border:2px solid var(--gold); box-shadow: 0 0 20px rgba(234,179,8,0.15);' : ''}">
-          <div style="display:flex; justify-content:space-between; align-items:center; color:#fff;">
-             <div style="flex:1; text-align:right; font-size:20px; font-weight:600;">${m.t1}</div>
-             <div class="match-score">${m.s1} - ${m.s2}</div>
-             <div style="flex:1; text-align:left; font-size:20px; font-weight:600;">${m.t2}</div>
-          </div>
-          <div class="scorers">
-             <div style="text-align:right;">${m.sc1.map(s => `⚽ ${s}`).join('<br>')}</div>
-             <div style="text-align:left;">${m.sc2.map(s => `⚽ ${s}`).join('<br>')}</div>
-          </div>
-          ${m.events && m.events.length > 0 ? '<div class="match-events">' + m.events.map(e => `<div>${e}</div>`).join('') + '</div>' : ''}
-      </div>`
-   ).join('');
+   if(ans && !ans.err) {
+       gEl('pOverList').innerHTML = ans.map(m=>`
+          <div class="match-card" style="${m.is_mine ? 'border:2px solid var(--gold); box-shadow: 0 0 20px rgba(234,179,8,0.15);' : ''}">
+              <div style="display:flex; justify-content:space-between; align-items:center; color:#fff;">
+                 <div style="flex:1; text-align:right; font-size:20px; font-weight:600;">${m.t1}</div>
+                 <div class="match-score">${m.s1} - ${m.s2}</div>
+                 <div style="flex:1; text-align:left; font-size:20px; font-weight:600;">${m.t2}</div>
+              </div>
+              <div class="scorers">
+                 <div style="text-align:right;">${m.sc1.map(s => `⚽ ${s}`).join('<br>')}</div>
+                 <div style="text-align:left;">${m.sc2.map(s => `⚽ ${s}`).join('<br>')}</div>
+              </div>
+              ${m.events && m.events.length > 0 ? '<div class="match-events">' + m.events.map(e => `<div>${e}</div>`).join('') + '</div>' : ''}
+          </div>`
+       ).join('');
 
-   gEl('over').style.display = 'flex';
-   btn.disabled=false; 
+       gEl('over').style.display = 'flex';
+   }
    btn.innerText = originalText;
 }
 
