@@ -128,28 +128,28 @@ def create_dummy_app(text):
 # --- 2. ייבוא בטוח של האפליקציות ---
 # נסה לייבא - אם לא קיים, השתמש בדמה
 try: from app1 import app as game1
-except ImportError: game1 = create_dummy_app("משחק 1")
+except ImportError: game1 = create_dummy_app("הישרדות")
 
 try: from app2 import app as game2
-except ImportError: game2 = create_dummy_app("משחק 2")
+except ImportError: game2 = create_dummy_app("RPG Legend")
 
 try: from app3 import app as game3
-except ImportError: game3 = create_dummy_app("משחק 3")
+except ImportError: game3 = create_dummy_app("Genesis")
 
 try: from app4 import app as game4
-except ImportError: game4 = create_dummy_app("משחק 4")
+except ImportError: game4 = create_dummy_app("קוד אדום")
 
 try: from app5 import app as game5
-except ImportError: game5 = create_dummy_app("משחק 5")
+except ImportError: game5 = create_dummy_app("IRON LEGION")
 
 try: from app6 import app as game6
-except ImportError: game6 = create_dummy_app("משחק 6")
+except ImportError: game6 = create_dummy_app("מבוך הצללים")
 
 try: from app7 import app as game7
-except ImportError: game7 = create_dummy_app("משחק 7")
+except ImportError: game7 = create_dummy_app("PROXIMA")
 
 try: from app8 import app as game8
-except ImportError: game8 = create_dummy_app("משחק 8")
+except ImportError: game8 = create_dummy_app("הטפיל")
 
 try: from app9 import app as game9
 except ImportError: game9 = create_dummy_app("CLOVER")
