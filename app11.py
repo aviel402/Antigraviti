@@ -369,7 +369,7 @@ HTML_TEMPLATE = """
 :root { 
     --bg-main: #0b0f19; --bg-panel: #151b2b; --gold: #eab308; --gold-glow: rgba(234, 179, 8, 0.4);
     --green: #10b981; --red: #ef4444; --text-light: #f8fafc; --text-muted: #94a3b8;
-    --pitch-bg: linear-gradient(0deg, #105a2b 0%, #166534 50%, #12572a 100%);
+    --pitch-bg: linear-gradient(0deg, #0e4d25 0%, #166534 50%, #105228 100%);
 }
 body { margin: 0; background: var(--bg-main); color: var(--text-light); font-family: 'Assistant', sans-serif; padding-bottom: 90px; overflow-x: hidden;}
 * { box-sizing: border-box; }
@@ -411,11 +411,9 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 .content-box.active { display:block; animation: fadeIn 0.4s ease-out;}
 @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
 
-/* 🌟 תיקון העיצוב של כרטיסיית השחקן 🌟 */
+/* FUT CARD STYLE */
 .fut-card {
-    width: 115px; /* מעט רחב יותר */
-    min-height: 180px; /* מינימום גובה, יתרחב אוטומטית אם יש כפתור */
-    height: auto;
+    width: 115px; min-height: 180px; height: auto;
     border-radius: 12px; position: relative; padding: 10px 6px; 
     font-family: 'Oswald', 'Assistant', sans-serif; cursor: pointer; transition: all 0.2s; border: 2px solid transparent;
     display: flex; flex-direction: column; justify-content: flex-start; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
@@ -435,13 +433,11 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 
 .fut-pic { width: 45px; height: 45px; background: rgba(0,0,0,0.15); border-radius: 50%; margin: 15px auto 4px; display:flex; justify-content:center; align-items:flex-end; font-size:26px; overflow:hidden;}
 
-/* התיקון לטקסט החתוך */
 .fut-name { 
     text-align: center; font-size: 13px; font-weight: 800; 
     margin: 8px 0; padding-bottom: 6px; 
     border-bottom: 1px solid rgba(0,0,0,0.2); 
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;
 }
 
 .fut-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 6px; font-size: 11px; margin-bottom: 8px; text-align: center; font-weight: 600;}
@@ -450,15 +446,12 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 /* Pitch Layout - CSS Grid Setup for 4-3-3 */
 .pitch-container { 
     background: var(--pitch-bg); border: 2px solid rgba(255,255,255,0.2); border-radius: 12px; 
-    position: relative; margin-bottom: 25px; padding: 20px;
-    height: 700px; display: grid; /* הגדלתי מעט את גובה המגרש כדי שיכיל את הכרטיסים המרווחים */
+    position: relative; margin-bottom: 25px; padding: 30px 20px;
+    min-height: 850px; display: grid; /* הוגדל משמעותית כדי להכיל את התוויות בנוחות */
     grid-template-rows: 1fr 1fr 1fr 1fr;
-    grid-template-areas: 
-        "att"
-        "mid"
-        "def"
-        "gk";
+    grid-template-areas: "att" "mid" "def" "gk";
     box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+    row-gap: 15px;
 }
 .pitch-container::before { content:''; position:absolute; top:50%; left:0; width:100%; height:2px; background:rgba(255,255,255,0.3); }
 .pitch-container::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:140px; height:140px; border:2px solid rgba(255,255,255,0.3); border-radius:50%;}
@@ -468,6 +461,14 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 #r-mid { grid-area: mid; }
 #r-def { grid-area: def; align-items: flex-start;}
 #r-gk { grid-area: gk; align-items: flex-end;}
+
+/* 🌟 סגנון חדש לעמדות במגרש 🌟 */
+.pitch-slot { display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2;}
+.slot-label {
+    font-size: 11px; font-weight: 800; background: rgba(0,0,0,0.85); padding: 4px 12px; 
+    border-radius: 20px; z-index: 10; font-family: 'Assistant', sans-serif; letter-spacing: 0.5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5); text-align: center;
+}
 
 .bench-container { display: flex; gap: 12px; overflow-x: auto; padding: 15px; background: var(--bg-panel); border-radius: 12px; border: 1px solid #1e293b;}
 
@@ -588,20 +589,13 @@ body { margin: 0; background: var(--bg-main); color: var(--text-light); font-fam
 </div>
 
 <script>
-// 🌟 פתרון לניתוב חכם: מזהה אם אנחנו בתוך /game11/ או כל נתיב אחר ומוסיף בהתאם 🌟
 let basePath = window.location.pathname;
-if (!basePath.endsWith('/')) {
-    basePath += '/';
-}
+if (!basePath.endsWith('/')) { basePath += '/'; }
 
 const API = {
-   data: basePath + "api/data", 
-   pick: basePath + "api/pick_team",
-   play: basePath + "api/play", 
-   swap: basePath + "api/swap",
-   transfer: basePath + "api/transfer", 
-   train: basePath + "api/train",
-   restart: basePath + "api/restart"
+   data: basePath + "api/data", pick: basePath + "api/pick_team",
+   play: basePath + "api/play", swap: basePath + "api/swap",
+   transfer: basePath + "api/transfer", train: basePath + "api/train", restart: basePath + "api/restart"
 };
 
 function gEl(id){ return document.getElementById(id); }
@@ -628,7 +622,6 @@ function goTab(vid, btn) {
 async function fireReq(epKey, payload={}, withLoad=true) {
     let pms = {method: payload ? 'POST' : 'GET'};
     if(payload && Object.keys(payload).length>0){ pms.body=JSON.stringify(payload); pms.headers={'Content-Type':'application/json'}; }
-    
     try {
         let rx = await fetch(API[epKey], pms); 
         let rz = await rx.json();
@@ -641,18 +634,16 @@ async function fireReq(epKey, payload={}, withLoad=true) {
     }
 }
 
-// ניהול בחירת שחקנים לחילוף
-let selPlayer = null; // {idx, loc}
+let selPlayer = null; 
 function handlePlayerClick(idx, loc) {
     if(!selPlayer) {
         selPlayer = {idx, loc};
-        _runBld(); // רינדור מחדש כדי להראות בחירה
+        _runBld(); 
     } else {
         if(selPlayer.idx === idx && selPlayer.loc === loc) {
-            selPlayer = null; // ביטול בחירה
+            selPlayer = null; 
             _runBld();
         } else {
-            // ביצוע חילוף
             fireReq('swap', {idx1: selPlayer.idx, loc1: selPlayer.loc, idx2: idx, loc2: loc});
             selPlayer = null;
         }
@@ -671,7 +662,6 @@ function getStatusIcon(p) {
     return '';
 }
 
-// mode: 'pitch', 'bench', 'market'
 function RPlCard(p, mode, index=null) {
     let isSel = (selPlayer && selPlayer.idx === index && selPlayer.loc === mode);
     let selClass = isSel ? "selected" : "";
@@ -684,15 +674,6 @@ function RPlCard(p, mode, index=null) {
     }
     
     let onClick = (mode === "pitch" || mode === "bench") ? `onclick="handlePlayerClick(${index}, '${mode}')"` : "";
-    let expectedPosStr = "";
-    
-    // אזהרת מיקום אם בהרכב
-    if(mode === "pitch") {
-        const expected = ["GK", "LB", "CB", "CB", "RB", "CM", "CM", "CAM", "LW", "ST", "RW"][index];
-        if(p.natural_pos !== expected) {
-            expectedPosStr = `<div style="position:absolute; bottom:-25px; left:0; right:0; text-align:center; font-size:10px; color:var(--red); font-weight:bold; background:rgba(0,0,0,0.8); border-radius:4px; padding:2px; z-index:10;">צריך להיות ${expected}</div>`;
-        }
-    }
 
     return `
     <div style="position:relative; display:flex; flex-direction:column; height:100%;">
@@ -711,7 +692,6 @@ function RPlCard(p, mode, index=null) {
             </div>
             ${btn}
         </div>
-        ${expectedPosStr}
     </div>`;
 }
 
@@ -719,7 +699,6 @@ function BldUi(data) {
    gEl('dynN').innerHTML = `⚽ ${data.my_team.name}` ;
    gEl('t-power').innerText = `OVR ${data.my_team.power}`;
    
-   // אנימציית מספרים לתקציב
    const elBudget = gEl('budget');
    const currentB = parseInt(elBudget.innerText.replace(/,/g, '')) || 0;
    if(currentB !== data.my_team.budget) {
@@ -731,17 +710,34 @@ function BldUi(data) {
    gEl('wwW').innerText = data.week;
    gEl('btn-play').innerText = "{{ texts.btn_play_match }} " + data.week;
    
-   // פיזור 4-3-3 לפי אינדקסים
-   // GK: 0, DEF: 1-4, MID: 5-7, ATT: 8-10
    const s11 = data.my_team.starting_11;
+   
+   // הגדרות מערך ותוויות למגרש
+   const FORMATION = ["GK", "LB", "CB", "CB", "RB", "CM", "CM", "CAM", "LW", "ST", "RW"];
+   const LABELS = {
+       "GK": "שוער (GK)", "LB": "מגן שמאלי (LB)", "CB": "בלם (CB)", "RB": "מגן ימני (RB)",
+       "CM": "קשר (CM)", "CAM": "קשר התקפי (CAM)", "LW": "כנף שמאל (LW)", "ST": "חלוץ (ST)", "RW": "כנף ימין (RW)"
+   };
+
    let htmlAtt = "", htmlMid = "", htmlDef = "", htmlGk = "";
    
    s11.forEach((p, i) => {
-       let card = RPlCard(p, "pitch", i);
-       if(i >= 8) htmlAtt += card;
-       else if(i >= 5) htmlMid += card;
-       else if(i >= 1) htmlDef += card;
-       else htmlGk += card;
+       let expectedPos = FORMATION[i];
+       let labelText = LABELS[expectedPos];
+       let isMatch = p.natural_pos === expectedPos;
+       let labelColor = isMatch ? "var(--green)" : "var(--red)";
+
+       // עוטף את הכרטיס במשבצת שכוללת תווית עמדה
+       let slotHtml = `
+       <div class="pitch-slot">
+           <div class="slot-label" style="color: ${labelColor}; border: 1px solid ${labelColor};">${labelText}</div>
+           ${RPlCard(p, "pitch", i)}
+       </div>`;
+
+       if(i >= 8) htmlAtt += slotHtml;
+       else if(i >= 5) htmlMid += slotHtml;
+       else if(i >= 1) htmlDef += slotHtml;
+       else htmlGk += slotHtml;
    });
 
    gEl('r-att').innerHTML = htmlAtt;
