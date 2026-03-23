@@ -1,3 +1,4 @@
+# maps9.py
 def generate_maps():
     maps = {}
     themes =[
@@ -11,24 +12,25 @@ def generate_maps():
         theme_index = (stage - 1) // 5
         is_boss = (stage % 5 == 0)
         platforms = []
-        walls = [] # חדש! קירות ממשיים שחוסמים תנועה
+        walls = [] 
 
-        # פריסת פלטפורמות ומכשולים לאורך 10,000 פיקסלים
+        # חישוב אורך המפה הנוכחית (גדל ב-500 כל שלב. שלב 1: 4000)
+        current_map_length = 4000 + ((stage - 1) * 500)
+
+        # פריסת פלטפורמות ומכשולים לאורך המפה הדינמית
         if not is_boss:
-            # במות רגילות
-            for offset in range(800, 9000, 700):
+            for offset in range(800, current_map_length - 1000, 700):
                 platforms.append({"x": offset, "y_offset": 120 + (offset % 100), "w": 250, "h": 20})
             
-            # הוספת "קירות" שחייבים לקפוץ מעליהם (מפוזרים לאורך המפה)
-            for offset in range(1200, 8500, 1500):
-                walls.append({"x": offset, "h": 150, "w": 40}) # קיר בגובה 150 פיקסלים
+            for offset in range(1200, current_map_length - 1500, 1500):
+                walls.append({"x": offset, "h": 150, "w": 40}) 
         else:
-            # זירת בוס - פלטפורמות באזור 2000-8000
-            for offset in range(1000, 8000, 1000):
+            # זירת בוס - הפלטפורמות תואמות לאורך המפה הנוכחי
+            for offset in range(1000, current_map_length - 1000, 1000):
                 platforms.append({"x": offset, "y_offset": 160, "w": 300, "h": 20})
                 platforms.append({"x": offset+400, "y_offset": 280, "w": 200, "h": 20})
 
-        # הוספת כל סוגי האויבים בהדרגה
+        # הוספת כל סוגי האויבים בהדרגה (הקוסם/summoner הוסר)
         allowed_enemies = ["melee"]
         if stage >= 2: allowed_enemies.append("jumper")
         if stage >= 3: allowed_enemies.append("flyer")     
@@ -37,7 +39,12 @@ def generate_maps():
         if stage >= 9: allowed_enemies.append("tank")      
         if stage >= 12: allowed_enemies.append("ninja")    
         if stage >= 14: allowed_enemies.append("shield")   
-        if stage >= 16: allowed_enemies.append("summoner") 
+
+        # בחירת בוס ייחודי לפי העולמות!
+        boss_type = "boss_forest" # ברירת מחדל
+        if stage == 10: boss_type = "boss_desert"
+        if stage == 15: boss_type = "boss_ice"
+        if stage == 20: boss_type = "boss_core"
 
         maps[stage] = {
             "name": f"SYSTEM OVERLORD" if is_boss else f"{themes[theme_index]['name']} - SECTOR {stage % 5 if stage % 5 != 0 else 5}",
@@ -47,6 +54,8 @@ def generate_maps():
             "platforms": platforms,
             "walls": walls,
             "is_boss": is_boss,
+            "boss_type": boss_type,
+            "map_length": current_map_length, # שומרים את האורך ל-JS
             "enemies": allowed_enemies
         }
     return maps
