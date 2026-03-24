@@ -4,7 +4,7 @@ import maps9
 import txt9
 
 app = Flask(__name__)
-app.secret_key = 'clover_boss_rush_edition_v11'
+app.secret_key = 'clover_fast_heroes_v10'
 
 PLAYER_DATA = {"shards": 0, "max_stage_reached": 1}
 
@@ -34,7 +34,7 @@ GAME_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON CLOVER - EPIC EVOLUTION</title>
+    <title>NEON CLOVER - SPEED UPDATE</title>
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Jura:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --gold: #00f3ff; --neon-red: #ff003c; --neon-green: #00ff66; --bg-dark: #0a0a0f; }
@@ -68,6 +68,16 @@ GAME_HTML = """
         
         #ui-layer { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:100; display:flex; flex-direction:column; padding:20px; justify-content:space-between; }
         
+        /* Mobile System Override */
+        .mobile-ui { position: absolute; bottom: 20px; width: 100%; left: 0; display: none; pointer-events: none; padding: 0 20px; justify-content: space-between; z-index: 150;}
+        .mob-left, .mob-right { pointer-events: auto; opacity: 0.5; transform: scale(0.85); transform-origin: bottom; }
+        
+        .d-pad { display: grid; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px 60px; gap: 5px;}
+        .action-btns { display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 5px; justify-content: end; }
+        
+        .btn-mob { background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; color: white; font-weight: 900; font-size: 18px; cursor: pointer; font-family:'Righteous'; transition:0.1s;}
+        .btn-mob:active { background: rgba(0,243,255,0.8); color: black; border-color:var(--gold); transform: scale(0.9); }
+
         .top-right-controls { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; pointer-events: auto;}
         .toggle-btn { padding: 8px 16px; font-family: 'Jura'; font-size: 14px; font-weight:bold; background: rgba(0,0,0,0.8); color: #fff; border: 1px solid var(--gold); border-radius: 4px; cursor: pointer; transition: 0.2s; text-shadow:0 0 5px var(--gold);}
         .toggle-btn:hover { background: var(--gold); color: #000;}
@@ -122,17 +132,37 @@ GAME_HTML = """
                 <div class="bar-out"><div class="bar-in hp-bar" id="hp-bar"></div></div> <span id="hp-t" style="color:#aaa;font-size:12px;margin-left:5px; width:40px; text-align:right;"></span></div>
             <div class="stat-bar-container"><span class="stat-icon" style="color:var(--gold);">EN</span>
                 <div class="bar-out"><div class="bar-in en-bar" id="en-bar"></div></div> <span id="en-t" style="color:#aaa;font-size:12px;margin-left:5px; width:40px; text-align:right;"></span></div>
-            <div id="shard-hud">SHARDS: 0 | LVL: 1</div>
+            <div id="shard-hud">SHARDS: 0</div>
         </div>
         <div class="stage-title" id="stage-info">...</div>
         
         <div class="top-right-controls">
+             <button class="toggle-btn" id="t-mobile-toggle" onclick="toggleMobileUI()"></button>
              <button class="toggle-btn" onclick="togglePause()">⏸ PAUSE <kbd>ESC</kbd></button>
-             <div style="font-size:18px; color:#ff3b3b; font-family:'Righteous'; font-weight:900;" id="lock-hud">🎯 TARGET LOCKED E</div>
         </div>
     </div>
     
     <div id="stage-alert"></div>
+    
+    <!-- Mobile UI Fixed -->
+    <div class="mobile-ui" id="mob-ui">
+        <div class="mob-left d-pad">
+            <div></div><button class="btn-mob" ontouchstart="mk('KeyW')" ontouchend="rk('KeyW')">W</button><div></div>
+            <button class="btn-mob" ontouchstart="mk('KeyA')" ontouchend="rk('KeyA')">A</button> 
+            <button class="btn-mob" ontouchstart="mk('KeyS')" ontouchend="rk('KeyS')">S</button> 
+            <button class="btn-mob" ontouchstart="mk('KeyD')" ontouchend="rk('KeyD')">D</button>
+        </div>
+        <div class="mob-right action-btns">
+            <button class="btn-mob" ontouchstart="mk('KeyH')" ontouchend="rk('KeyH')">H</button> 
+            <button class="btn-mob" ontouchstart="mk('KeyJ')" ontouchend="rk('KeyJ')">J</button> 
+            <button class="btn-mob" ontouchstart="mk('KeyK')" ontouchend="rk('KeyK')">K</button> 
+            <button class="btn-mob" style="color:var(--neon-green);" ontouchstart="mk('KeyE')" ontouchend="rk('KeyE')">E</button> 
+            <button class="btn-mob" style="color:var(--gold);" ontouchstart="mk('KeyU')" ontouchend="rk('KeyU')">U</button> 
+            <button class="btn-mob" ontouchstart="mk('KeyI')" ontouchend="rk('KeyI')">I</button> 
+            <div></div>
+            <button class="btn-mob" style="color:var(--neon-red);" ontouchstart="mk('KeyY')" ontouchend="rk('KeyY')">Y</button>
+        </div>
+    </div>
 </div>
 
 <div id="death-screen" class="screen hidden" style="z-index:400;">
@@ -150,7 +180,8 @@ GAME_HTML = """
 <script>
 const MAPS = {{ maps_json | safe }}; const TEXTS = {{ texts | safe }}; const HERO_TEXTS = {{ heroes_texts | safe }};
 
-document.getElementById('t-main-title').innerText = TEXTS.title_main; document.getElementById('t-main-sub').innerText = TEXTS.subtitle_main; document.getElementById('t-htp-title').innerText = TEXTS.how_to_play_title; document.getElementById('t-htp-desc').innerText = TEXTS.how_to_play_desc; document.getElementById('t-ctrl-title').innerText = TEXTS.controls_title; document.getElementById('t-pause').innerText = TEXTS.pause_title; document.getElementById('btn-resume').innerText = TEXTS.btn_resume; document.getElementById('btn-restart').innerText = TEXTS.btn_restart; document.getElementById('t-death').innerText = TEXTS.death_title; document.getElementById('t-death-sub').innerText = TEXTS.death_sub; document.getElementById('btn-retry').innerText = TEXTS.btn_retry; document.getElementById('t-vic').innerText = TEXTS.victory_title; document.getElementById('t-vic-sub').innerText = TEXTS.victory_sub; document.getElementById('btn-home').innerText = TEXTS.btn_home; document.getElementById('t-dev-title').innerText = TEXTS.dev_title; document.getElementById('t-dev-btn').innerText = TEXTS.dev_btn;
+// Set DOM Texts
+document.getElementById('t-main-title').innerText = TEXTS.title_main; document.getElementById('t-main-sub').innerText = TEXTS.subtitle_main; document.getElementById('t-htp-title').innerText = TEXTS.how_to_play_title; document.getElementById('t-htp-desc').innerText = TEXTS.how_to_play_desc; document.getElementById('t-ctrl-title').innerText = TEXTS.controls_title; document.getElementById('t-pause').innerText = TEXTS.pause_title; document.getElementById('btn-resume').innerText = TEXTS.btn_resume; document.getElementById('btn-restart').innerText = TEXTS.btn_restart; document.getElementById('t-death').innerText = TEXTS.death_title; document.getElementById('t-death-sub').innerText = TEXTS.death_sub; document.getElementById('btn-retry').innerText = TEXTS.btn_retry; document.getElementById('t-vic').innerText = TEXTS.victory_title; document.getElementById('t-vic-sub').innerText = TEXTS.victory_sub; document.getElementById('btn-home').innerText = TEXTS.btn_home; document.getElementById('t-mobile-toggle').innerText = TEXTS.mobile_toggle; document.getElementById('t-dev-title').innerText = TEXTS.dev_title; document.getElementById('t-dev-btn').innerText = TEXTS.dev_btn;
 let clist = ""; TEXTS.controls_list.forEach(c => clist += `<li>${c}</li>`); document.getElementById('t-ctrl-list').innerHTML = clist;
 if(new URLSearchParams(window.location.search).get('x') === 'v') { document.getElementById('dev-panel').style.display = 'block'; }
 
@@ -160,9 +191,11 @@ window.addEventListener('keydown', e => {
     if(e.code === 'KeyP' || e.code === 'Escape') togglePause();
     activeKeys[e.code]=true;
 }); window.addEventListener('keyup', e => { activeKeys[e.code]=false; });
-function kd(c) { return activeKeys[c]===true; } 
+function kd(c) { return activeKeys[c]===true; } function mk(c){activeKeys[c]=true;} function rk(c){activeKeys[c]=false;}
+let isMobUI=false; function toggleMobileUI(){isMobUI=!isMobUI; document.getElementById('mob-ui').style.display=isMobUI?'flex':'none';}
 function intersect(a,b){return!(b.x>a.x+a.w || b.x+b.w<a.x || b.y>a.y+a.h || b.y+b.h<a.y);}
 
+// HEROES CONFIG - SPEEDS INCREASED SIGNIFICANTLY!
 const HEROES =[
     { id: 'earth', col: '#2ecc71', maxHp: 180, hpRegen: 0.01, speed: 4.0, jump: 15, maxEn: 100, dmgMult: 1.2, enCostMult: 1, pCol: '#27ae60'},
     { id: 'fire', col: '#e74c3c', maxHp: 80, hpRegen: 0, speed: 6.5, jump: 17, maxEn: 120, dmgMult: 1.8, enCostMult: 1, pCol: '#ff7979'},
@@ -187,64 +220,77 @@ function createSelectMenu() {
 const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); document.body.appendChild(canvas);
 window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; ctx.imageSmoothingEnabled=false; }); window.dispatchEvent(new Event('resize'));
 
-// --- RETRO SPRITE ENGINE ---
+// --- UNIQUE CHARACTER DESIGNS ---
 function drawPlayerSprite(context, tx, ty, w, h, cId, pCol, isFaceRight, isCrouch, vx) {
     context.save(); context.translate(tx, ty); 
     if(!isFaceRight){ context.scale(-1, 1); context.translate(-w, 0); } 
 
     let bx = 0; let bw = w; 
-    let walkBounce = Math.abs(vx) > 0.5 ? Math.sin(f/5)*(w*0.1) : 0; // scale bounce
+    let walkBounce = Math.abs(vx) > 0.5 ? Math.sin(f/5)*3 : 0;
+    
+    // Shadow
+    context.fillStyle = 'rgba(0,0,0,0.5)'; context.fillRect(bx+5, h-2, bw-10, 4);
     
     context.translate(0, walkBounce);
 
-    if (cId === 'earth') { 
-        context.fillStyle = '#4a5d23'; context.fillRect(bx-4, 10, bw+8, h-10); 
-        context.fillStyle = '#27ae60'; context.fillRect(bx, 0, bw, h*0.25); 
-        context.fillStyle = '#2ecc71'; context.fillRect(bx-8, 15, bw*0.3, h*0.3); 
-        context.fillStyle = '#fff'; context.fillRect(bx+bw-8, 5, 4, 4); 
+    if (cId === 'earth') { // TITAN
+        context.fillStyle = '#4a5d23'; context.fillRect(bx-4, 10, bw+8, h-10); // Massive body
+        context.fillStyle = '#27ae60'; context.fillRect(bx, 0, bw, 15); // Head
+        context.fillStyle = '#2ecc71'; context.fillRect(bx-8, 15, 12, 20); // Pauldron
+        context.fillStyle = '#fff'; context.fillRect(bx+bw-8, 5, 4, 4); // Eye
     } 
-    else if (cId === 'fire') { 
-        context.fillStyle = '#c0392b'; context.fillRect(bx+4, 15, bw-8, h-15); 
-        context.fillStyle = '#e74c3c'; context.beginPath(); context.arc(bx+bw/2, 10, bw*0.3, 0, Math.PI*2); context.fill(); 
+    else if (cId === 'fire') { // BLAZE
+        context.fillStyle = '#c0392b'; context.fillRect(bx+4, 15, bw-8, h-15); // Slim body
+        context.fillStyle = '#e74c3c'; context.beginPath(); context.arc(bx+bw/2, 10, 10, 0, Math.PI*2); context.fill(); // Round head
+        // Flame hair
         context.fillStyle = '#f1c40f'; context.beginPath(); context.moveTo(bx+bw/2, 10); context.lineTo(bx+bw/2-5+Math.sin(f/2)*5, -10); context.lineTo(bx+bw/2+5, 5); context.fill();
         context.fillStyle = '#fff'; context.fillRect(bx+bw/2+2, 5, 4, 4);
     }
-    else if (cId === 'water') { 
-        context.fillStyle = '#2980b9'; context.fillRect(bx, 10, bw, h-10); 
-        context.fillStyle = '#3498db'; context.beginPath(); context.moveTo(bx, 15); context.lineTo(bx+bw/2, 0); context.lineTo(bx+bw, 15); context.fill(); 
-        context.fillStyle = '#111'; context.fillRect(bx+bw/2, 5, 10, 10); 
-        context.fillStyle = '#7ed6df'; context.fillRect(bx+bw/2+4, 8, 4, 4); 
+    else if (cId === 'water') { // AQUA
+        context.fillStyle = '#2980b9'; context.fillRect(bx, 10, bw, h-10); // Robe
+        context.fillStyle = '#3498db'; context.beginPath(); context.moveTo(bx, 15); context.lineTo(bx+bw/2, 0); context.lineTo(bx+bw, 15); context.fill(); // Hood
+        context.fillStyle = '#111'; context.fillRect(bx+bw/2, 5, 10, 10); // Face hidden
+        context.fillStyle = '#7ed6df'; context.fillRect(bx+bw/2+4, 8, 4, 4); // Glowing eye
     }
-    else if (cId === 'air') { 
-        context.fillStyle = '#bdc3c7'; context.fillRect(bx+5, 10, bw-10, h-10); 
-        context.fillStyle = '#ecf0f1'; context.beginPath(); context.arc(bx+bw/2, 8, bw*0.25, 0, Math.PI*2); context.fill(); 
+    else if (cId === 'air') { // ZEPHYR
+        context.fillStyle = '#bdc3c7'; context.fillRect(bx+5, 10, bw-10, h-10); // Agile body
+        context.fillStyle = '#ecf0f1'; context.beginPath(); context.arc(bx+bw/2, 8, 8, 0, Math.PI*2); context.fill(); // Head
+        // Scarf
         context.fillStyle = '#fff'; context.fillRect(bx-15-Math.sin(f/3)*5, 10, 20, 5);
-        context.fillStyle = '#3498db'; context.fillRect(bx+bw/2+2, 5, 4, 2); 
+        context.fillStyle = '#3498db'; context.fillRect(bx+bw/2+2, 5, 4, 2); // Visor
     }
-    else if (cId === 'lightning') { 
-        context.fillStyle = '#111'; context.fillRect(bx+5, 10, bw-10, h-10); 
-        context.fillStyle = '#f1c40f'; context.fillRect(bx+5, 0, bw-10, h*0.2); 
+    else if (cId === 'lightning') { // VOLT
+        context.fillStyle = '#111'; context.fillRect(bx+5, 10, bw-10, h-10); // Dark suit
+        context.fillStyle = '#f1c40f'; context.fillRect(bx+5, 0, bw-10, 12); // Yellow helmet
+        // Lightning horns
         context.beginPath(); context.moveTo(bx+5, 0); context.lineTo(bx-5, -10); context.lineTo(bx+10, -5); context.fill();
         context.beginPath(); context.moveTo(bx+bw-5, 0); context.lineTo(bx+bw+5, -10); context.lineTo(bx+bw-10, -5); context.fill();
-        context.fillStyle = '#fff'; context.fillRect(bx+bw-8, 4, 6, 4); 
+        context.fillStyle = '#fff'; context.fillRect(bx+bw-8, 4, 6, 4); // Visor
     }
-    else if (cId === 'magma') { 
-        context.fillStyle = '#8e44ad'; context.fillRect(bx, 5, bw, h-5); 
-        context.fillStyle = '#d35400'; context.fillRect(bx+5, h/2-5, bw-10, 10); 
-        context.fillStyle = '#eb4d4b'; context.fillRect(bx+bw-10, 10, 6, 6); 
-        if(f%10<5) { context.fillStyle = '#f1c40f'; context.fillRect(bx+10, h/2-2, 4, 4); } 
+    else if (cId === 'magma') { // CORE
+        context.fillStyle = '#8e44ad'; context.fillRect(bx, 5, bw, h-5); // Dark rock body
+        context.fillStyle = '#d35400'; context.fillRect(bx+5, h/2-5, bw-10, 10); // Magma core
+        context.fillStyle = '#eb4d4b'; context.fillRect(bx+bw-10, 10, 6, 6); // Eye
+        if(f%10<5) { context.fillStyle = '#f1c40f'; context.fillRect(bx+10, h/2-2, 4, 4); } // Core pulse
     }
-    else if (cId === 'light') { 
-        context.fillStyle = '#fff'; context.fillRect(bx+5, 15, bw-10, h-15); 
-        context.fillStyle = '#ffffb3'; context.beginPath(); context.arc(bx+bw/2, 10, bw*0.25, 0, Math.PI*2); context.fill(); 
+    else if (cId === 'light') { // PULSE
+        context.fillStyle = '#fff'; context.fillRect(bx+5, 15, bw-10, h-15); // Bright body
+        context.fillStyle = '#ffffb3'; context.beginPath(); context.arc(bx+bw/2, 10, 9, 0, Math.PI*2); context.fill(); // Head
+        // Halo
         context.strokeStyle = '#f1c40f'; context.lineWidth=2; ctx.beginPath(); ctx.ellipse(bx+bw/2, -5+Math.sin(f/5)*3, 12, 4, 0, 0, Math.PI*2); ctx.stroke();
         context.fillStyle = '#f1c40f'; context.fillRect(bx+bw/2+2, 8, 4, 4);
     }
-    else if (cId === 'dark') { 
-        context.fillStyle = '#2c3e50'; context.fillRect(bx, 10, bw, h-10); 
-        context.fillStyle = '#8e44ad'; context.fillRect(bx, 15, bw, h-20); 
-        context.fillStyle = '#111'; context.beginPath(); context.arc(bx+bw/2, 10, bw*0.3, 0, Math.PI*2); context.fill(); 
-        context.fillStyle = '#ff003c'; context.fillRect(bx+bw/2+4, 8, 4, 4); 
+    else if (cId === 'dark') { // VOID
+        context.fillStyle = '#2c3e50'; context.fillRect(bx, 10, bw, h-10); // Dark body
+        context.fillStyle = '#8e44ad'; context.fillRect(bx, 15, bw, h-20); // Cloak
+        context.fillStyle = '#111'; context.beginPath(); context.arc(bx+bw/2, 10, 10, 0, Math.PI*2); context.fill(); // Head
+        context.fillStyle = '#ff003c'; context.fillRect(bx+bw/2+4, 8, 4, 4); // Red eye
+    }
+    else {
+        // Fallback
+        context.fillStyle = '#000'; context.fillRect(bx-2, -2, bw+4, h+4); 
+        context.fillStyle = pCol; context.fillRect(bx, 0, bw, h); 
+        context.fillStyle = '#fff'; context.fillRect(bx+bw-12, 10, 6, 6); 
     }
 
     context.restore();
@@ -280,28 +326,13 @@ function drawEnemySprite(context, tx, ty, w, h, primeCol, t_type, hpRatio, phase
         context.fillStyle='#ff003c'; context.fillRect(bx+bw-12, h/2-4, 8, 8); 
     }
     else if(t_type === 'boss'){
-        // 4 TYPES OF BOSSES!
-        if(phaseFlag === 1) { // THE BRUTE
-            context.fillStyle = '#555'; context.fillRect(0,0, w, h);
-            context.fillStyle = '#95a5a6'; context.fillRect(4,4, w-8, h-8);
-            context.fillStyle = 'red'; context.fillRect(w-15, 20, 10,10); 
-        } 
-        else if(phaseFlag === 2) { // THE WARDEN
-            context.fillStyle = '#2980b9'; context.fillRect(0,0, w, h);
-            context.fillStyle = '#fff'; context.fillRect(w-15, -10, 20, h+20); // Giant shield
-            context.fillStyle = 'cyan'; context.fillRect(w/2, 10, 10,10); 
-        }
-        else if(phaseFlag === 3) { // THE VIPER
-            context.fillStyle = '#c0392b'; context.fillRect(0,0, w, h);
-            context.fillStyle = '#e74c3c'; context.beginPath(); context.moveTo(0,h); context.lineTo(w/2,0); context.lineTo(w,h); context.fill();
-            context.fillStyle = '#f1c40f'; context.fillRect(w-15, 30, 8,8); 
-        }
-        else if(phaseFlag === 4) { // THE OVERLORD
-            context.fillStyle = '#8e44ad'; context.fillRect(0,0, w, h);
-            context.fillStyle = '#f1c40f'; context.fillRect(-10, 0, w+20, 20); // Crown
-            context.fillStyle = '#fff'; context.beginPath(); context.arc(w/2, h/2, 15, 0, Math.PI*2); context.fill(); // Core
-            context.fillStyle = 'black'; context.fillRect(w/2-5, h/2-5, 10,10); 
-        }
+        let c = phaseFlag===1 ? '#f39c12' : phaseFlag===2 ? '#8e44ad' : '#e74c3c';
+        context.fillStyle = '#111'; context.fillRect(0,0, w, h);
+        context.fillStyle = c; context.fillRect(4,4, w-8, h-8);
+        context.fillStyle = '#000'; context.fillRect(w/2, 20, w/2, 20); 
+        context.fillStyle = phaseFlag>2 ? '#fff':'red'; context.fillRect(w/2+10, 25, 10,8); 
+        context.fillStyle='#f1c40f'; context.fillRect(-10, 0, 25, 25); 
+        if(phaseFlag>=2) { context.fillStyle='#00f3ff'; context.fillRect(w/2, h/2, w+40, 6); } 
     }
     else {
         context.fillStyle = primeCol; context.fillRect(bx, 0, bw, h);
@@ -312,11 +343,11 @@ function drawEnemySprite(context, tx, ty, w, h, primeCol, t_type, hpRatio, phase
     context.restore();
 }
 
+const STAGE_WIDTH = 10000;
 let pl, e_arr=[], pr_arr=[], p_pr=[], fx=[], drops=[];
 let currentMap = MAPS[1]; let globalStage = 1; let f=0; let shakeV=0, camX=0;
 let isPaused = false, pipe = null, cloverChest = null;
-let collectedShards = 0; let playerLevel = 1; 
-let shardNotif = ""; let shardNotifTimer = 0;
+let collectedShards = 0; let shardNotif = ""; let shardNotifTimer = 0;
 
 function doShake(amt){shakeV=amt*5;} 
 function togglePause() {
@@ -342,14 +373,8 @@ class Drop {
             if(this.isB){pl.maxHp+=20; pl.maxEn+=20; pl.hp=pl.maxHp; pl.en=pl.maxEn; makeFX(this.x,this.y, 25,'#00f3ff','boom');}
             else { pl.hp=Math.min(pl.hp+15, pl.maxHp); makeFX(this.x,this.y, 10,'#00ff66','spark'); } 
             
-            collectedShards++; 
-            if(collectedShards % 20 === 0) { 
-                pl.maxHp+=10; pl.maxEn+=10; pl.hp=pl.maxHp; playerLevel++;
-                // SIZE GROWS!
-                pl.w += 4; pl.h += 6; 
-                shardNotif=`LEVEL UP! LVL ${playerLevel}`; shardNotifTimer=100; makeFX(pl.x,pl.y,30,'#00f3ff','boom');
-            }
-            document.getElementById('shard-hud').innerText = `SHARDS: ${collectedShards} | LVL: ${playerLevel}`;
+            collectedShards++; document.getElementById('shard-hud').innerText = "SHARDS: " + collectedShards;
+            if(collectedShards % 20 === 0) { pl.maxHp+=10; pl.maxEn+=10; pl.hp=pl.maxHp; shardNotif="LEVEL UP! +MAX STATS"; shardNotifTimer=100; makeFX(pl.x,pl.y,30,'#00f3ff','boom');}
             return true;
         } return false;
     }
@@ -358,22 +383,14 @@ class Drop {
 
 class Player {
     constructor(c){
-        this.w=36; this.h=64; this.baseH = 64; 
-        this.x=100; this.y=0; this.vx=0; this.vy=0; this.c = c; this.maxHp=c.maxHp; this.hp=this.maxHp; this.maxEn=c.maxEn; this.en=this.maxEn;
+        this.w=36; this.h=64; this.x=100; this.y=0; this.vx=0; this.vy=0; this.c = c; this.maxHp=c.maxHp; this.hp=this.maxHp; this.maxEn=c.maxEn; this.en=this.maxEn;
         this.facing = 1; this.grounded = false; this.target = null; this.iFrames = 0; this.chargeI = 0; this.atkWait = {}; this.jCount=0;
     }
     upd() {
         if(this.hp<=0) return; this.hp = Math.min(this.hp+this.c.hpRegen, this.maxHp); if(this.iFrames>0) this.iFrames--;
         
         let crch=kd('KeyS'); let sprt=(kd('ShiftLeft')||kd('ShiftRight')); let chu=kd('KeyU'); let chi=kd('KeyI');
-        
-        // Dynamic Crouching based on current height
-        let targetH = crch && !chi ? this.baseH * 0.6 : this.baseH;
-        if(this.h !== targetH) {
-            let diff = this.h - targetH;
-            this.h = targetH;
-            this.y += diff; 
-        }
+        if(crch && !chi){ if(this.h!==38) {this.y+=26; this.h=38; this.vx*=0.4;} } else { if(this.h!==64) {this.y-=26; this.h=64;} }
 
         if(chi){ this.chargeI=Math.min(this.chargeI+2, 200); makeFX(this.x+this.w/2, this.y+this.h/2,1,this.c.pCol,'spark'); if(Math.floor(this.chargeI)%10==0) doShake(0.5); 
         } else if(this.chargeI>0){
@@ -382,8 +399,9 @@ class Player {
             this.vx-=(this.chargeI/8)*this.facing; this.chargeI=0; doShake(5);
         }
 
+        // SPEED MULTIPLIERS!
         let speed = this.c.speed; 
-        if(sprt) speed*=2.2; 
+        if(sprt) speed*=2.2; // Sprint is much faster now
         if(chu || chi || crch) speed*=0.4;
         
         if(sprt && this.grounded && f%3===0 && (kd('KeyA')||kd('KeyD'))) makeFX(this.x+10,this.y+this.h, 2, currentMap.neon,'spark');
@@ -405,12 +423,12 @@ class Player {
 
         if(chu){ this.en = Math.min(this.en+1.5, this.maxEn); makeFX(this.x+this.w/2,this.y+this.h/2,1,currentMap.neon,'beam');} 
         else if(!chi) {
-            this.shK('KeyH','1',8*this.c.enCostMult, 15*this.c.dmgMult, 10 + (playerLevel));
-            this.shK('KeyJ','2',20*this.c.enCostMult, 35*this.c.dmgMult, 18 + (playerLevel));
-            this.shK('KeyK','3',45*this.c.enCostMult, 80*this.c.dmgMult, 30 + (playerLevel));
+            this.shK('KeyH','1',8*this.c.enCostMult, 15*this.c.dmgMult, 10);
+            this.shK('KeyJ','2',20*this.c.enCostMult, 35*this.c.dmgMult, 18);
+            this.shK('KeyK','3',45*this.c.enCostMult, 80*this.c.dmgMult, 30);
             if(kd('KeyY')&&!this.atkWait['KeyY']) {
                 if(this.en >= this.maxEn-2){
-                    this.en=0; p_pr.push({x:this.facing>0?this.x+this.w:this.x-100, y:this.y-10, dir:this.facing, s:18, dmg:500*this.c.dmgMult, size:80 + (playerLevel*2), color:varColor('neon-red'), tgt:this.target});
+                    this.en=0; p_pr.push({x:this.facing>0?this.x+this.w:this.x-100, y:this.y-10, dir:this.facing, s:18, dmg:500*this.c.dmgMult, size:80, color:varColor('neon-red'), tgt:this.target});
                     this.vx -= 20*this.facing; doShake(12);
                 } this.atkWait['KeyY']=true; 
             } else if(!kd('KeyY')) this.atkWait['KeyY']=false;
@@ -421,7 +439,7 @@ class Player {
 
         this.vy+=0.6; this.y+=this.vy; 
         if(this.x < 50) {this.x=50;}
-        if(this.x+this.w > currentMap.length) {this.x=currentMap.length-this.w;}
+        if(this.x+this.w > STAGE_WIDTH) {this.x=STAGE_WIDTH-this.w;}
         
         let isG=false; let flY=canvas.height-80; 
         if(this.y+this.h>=flY){this.y=flY-this.h; this.vy=0; isG=true;} 
@@ -470,65 +488,44 @@ class Player {
 }
 
 class Enemy {
-    constructor(x, ty, boss_type=0) {
+    constructor(x, ty) {
         this.ty=ty; this.w=45; this.h=55; this.isAggro=false;
         this.homeX = x; this.x = x; 
         this.vx=0; this.vy=0; 
-        this.s = 3.0; this.stC=120; 
-        this.maxHp = 60 + (globalStage*30);
+        this.s = 3.0; this.stC=120; // BASE ENEMY SPEED INCREASED!
+        this.maxHp = 60 + (globalStage*25);
         this.c = '#7f8c8d'; this.atkWait = 0; 
         
-        this.bossType = boss_type;
-
-        if(ty==='boss'){ 
-            this.maxHp=1000+globalStage*300; this.w=100; this.h=120; 
-            if(boss_type===1) { this.s = 1.5; } // Brute
-            if(boss_type===2) { this.s = 1.0; } // Warden
-            if(boss_type===3) { this.s = 3.5; } // Viper
-            if(boss_type===4) { this.s = 2.0; } // Overlord
-        }
+        if(ty==='boss'){ this.maxHp=1000+globalStage*200; this.w=90; this.h=110; this.s=2.0;}
         else if(ty==='tank'){ this.w=65; this.h=85; this.maxHp*=4; this.s=1.0; this.c='#34495e';}
         else if(ty==='shield'){ this.w=50; this.c='#95a5a6'; this.maxHp*=2; this.s=2.5;}
-        else if(ty==='bomber'){ this.w=35; this.h=45; this.maxHp*=0.7; this.s=4.5;} 
+        else if(ty==='bomber'){ this.w=35; this.h=45; this.maxHp*=0.7; this.s=4.5;} // Fast!
         else if(ty==='flyer') { this.maxHp*=0.6; this.s=2.5; this.y = canvas.height - 350; } 
-        else if(ty==='ninja') { this.maxHp*=0.8; this.s=4.0; } 
+        else if(ty==='ninja') { this.maxHp*=0.8; this.s=4.0; } // Very fast
         else if(ty==='shooter'){ this.s=1.5; this.stC = 120 - Math.min(60, globalStage*2); }
         else { this.c = '#c0392b'; } 
         
         if(this.ty !== 'flyer') this.y = -100;
-        this.hp = this.maxHp;
+        this.hp = this.maxHp; this.phase = 1;
     }
 
     upd() {
         let dx = pl.x - this.x; let isFDir = (dx>0)?1:-1; let flY = canvas.height-80; 
 
-        if(!this.isAggro){ if(Math.abs(dx)<1000) this.isAggro=true; else if(this.ty!=='flyer') this.vx = Math.sin(f/60)*this.s*0.5;}
+        if(!this.isAggro){ if(Math.abs(dx)<900) this.isAggro=true; else if(this.ty!=='flyer') this.vx = Math.sin(f/60)*this.s*0.5;}
         else {
             if(this.ty==='boss') {
+                if(this.hp/this.maxHp < 0.3) this.phase=3; else if(this.hp/this.maxHp < 0.6) this.phase=2;
+                let curSp = (this.phase===3)? 4.5 : (this.phase===2)? 3.0 : 2.0;
                 this.atkWait--;
-                // התנהגות שונה לכל בוס
-                if(this.bossType === 1) { // THE BRUTE
-                    if(this.atkWait <= 0) { this.vx = isFDir * 15; this.atkWait = 100; } // Dash
-                    else if(this.atkWait > 80) { this.vx = isFDir * 15; }
-                    else { this.vx = isFDir * this.s; }
+                if(this.phase===1) { if(Math.abs(dx)>20) this.vx=isFDir*curSp; }
+                else if (this.phase===2) { 
+                    this.vx = isFDir * curSp; 
+                    if(this.atkWait<=0 && Math.abs(dx)>150){ this.atkWait=90; pr_arr.push({x:this.x+this.w/2, y:this.y+30, dx:isFDir*12, dy:2, age:0}); }
                 }
-                else if(this.bossType === 2) { // THE WARDEN
-                    this.vx = isFDir * this.s;
-                    if(this.atkWait <= 0) { pr_arr.push({x:this.x+this.w/2,y:this.y+h/2,dx:isFDir*10,dy:0,age:0}); this.atkWait=60; }
-                }
-                else if(this.bossType === 3) { // THE VIPER
-                    this.vx = isFDir * this.s;
-                    if(this.atkWait <= 0 && this.y+this.h >= flY) { this.vy = -15; this.atkWait=50; }
-                    if(this.vy < 0 && f%10===0) { pr_arr.push({x:this.x,y:this.y+20,dx:isFDir*12,dy:5,age:0}); }
-                }
-                else if(this.bossType === 4) { // THE OVERLORD
-                    this.y = pl.y - 100 + Math.sin(f/20)*50; // מרחף
-                    this.vx = isFDir * this.s;
-                    if(this.atkWait <= 0) {
-                        pr_arr.push({x:this.x,y:this.y+this.h,dx:isFDir*15,dy:10,age:0});
-                        if(Math.random()<0.3) e_arr.push(new Enemy(this.x, 'flyer'));
-                        this.atkWait = 40;
-                    }
+                else if(this.phase===3) { 
+                    if(this.atkWait>0){ this.vx = isFDir*8; } else { this.vx = isFDir*curSp; }
+                    if(f%180===0){ this.atkWait=30; this.vy=-8; makeFX(this.x,this.y,10,varColor('neon-red'),'boom');}
                 }
             }
             else if (this.ty==='flyer'){ this.x += isFDir * this.s; this.y = pl.y - 120 + Math.sin(f/20)*60; }
@@ -538,6 +535,10 @@ class Enemy {
             else if (this.ty==='shooter') { this.atkWait--; if(Math.abs(dx)>450) this.vx = isFDir*this.s; else this.vx*=0.8;
                  if(this.atkWait<=0) { this.atkWait = this.stC; pr_arr.push({x:this.x+20,y:this.y+20, dx:isFDir*12, dy:0, age:0});}
             }
+            else if (this.ty==='summoner') {
+                 if(Math.abs(dx)<600){this.vx = isFDir* -2.0;} else this.vx*=0.8; 
+                 this.atkWait--; if(this.atkWait<=0){ this.atkWait=200; e_arr.push(new Enemy(this.x, 'jumper')); e_arr[e_arr.length-1].isAggro=true; }
+            }
             else if(this.ty==='jumper') { this.vx=isFDir*2.5; this.atkWait--; if(this.atkWait<=0 && this.y+this.h>=flY-20) {this.vy=-14; this.atkWait=80;}}
             else { this.vx = isFDir*this.s; } 
         }
@@ -545,7 +546,7 @@ class Enemy {
         let nx = this.x + this.vx;
         if(nx < 50) { nx = 50; this.vx*=-1; }
         
-        if(this.ty !== 'flyer' && this.bossType !== 4) {
+        if(this.ty !== 'flyer') {
             currentMap.walls.forEach(w => {
                 let wx = w.x; let wy = canvas.height - 80 - w.h;
                 if(this.y + this.h > wy) {
@@ -556,7 +557,7 @@ class Enemy {
         }
         this.x = nx;
 
-        if(this.ty!=='flyer' && this.bossType !== 4) {
+        if(this.ty!=='flyer') {
             this.vy+=0.6; this.y+=this.vy; 
             let isGe=false; if(this.y+this.h>=flY){this.y=flY-this.h; this.vy=0; isGe=true;}
             if(!isGe && this.ty!=='jumper') {
@@ -587,7 +588,7 @@ class Enemy {
 
     draw() { 
         if(!this.isAggro && this.ty==='flyer' && this.y < 0) return; 
-        drawEnemySprite(ctx, this.x, this.y, this.w, this.h, this.c, this.ty, this.hp/this.maxHp, this.bossType, pl.x > this.x); 
+        drawEnemySprite(ctx, this.x, this.y, this.w, this.h, this.c, this.ty, this.hp/this.maxHp, this.phase, pl.x > this.x); 
         ctx.fillStyle='#000'; ctx.fillRect(this.x, this.y-10, this.w,4); ctx.fillStyle='red'; ctx.fillRect(this.x,this.y-10, this.w*(Math.max(0,this.hp)/this.maxHp), 4);
         if(!this.isAggro && this.ty!=='flyer') { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font="14px Jura"; ctx.fillText("Zzz", this.x+10, this.y-15); }
     }
@@ -615,22 +616,17 @@ function loadStg(s_N) {
     pl.x = 100; 
     e_arr=[]; pr_arr=[]; p_pr=[]; drops=[]; pipe=null; cloverChest=null; 
 
-    if(tmap.is_boss) { 
-        e_arr.push(new Enemy(2500, 'boss', tmap.boss_type)); 
-    } 
+    if(tmap.is_boss) { e_arr.push(new Enemy(2000, 'boss')); } 
     else { 
-        let ec = 10 + s_N * 3; // More enemies
-        let spacing = tmap.length / ec;
+        let ec = 15 + s_N * 3; // More enemies!
         for(let k=0; k<ec; k++){ 
             let ty=tmap.enemies[Math.floor(Math.random()*tmap.enemies.length)]; 
-            // Spawn nodes - מרווחים הגיוניים!
-            let spawnX = 1000 + (k * spacing) + (Math.random() * 300);
-            e_arr.push(new Enemy(spawnX, ty)); 
+            e_arr.push(new Enemy(1500 + Math.random()*8000, ty)); 
         } 
     }
     
-    if(s_N === 20) { cloverChest=new CloverChest(tmap.length - 500); }
-    else { pipe = new Pipe(tmap.length - 200); }
+    if(s_N === 20) { cloverChest=new CloverChest(9500); }
+    else { pipe = new Pipe(9800); }
 }
 
 function startMission(charData, devFlag) {
@@ -682,10 +678,7 @@ function sysLoop() {
              for(let j=e_arr.length-1; j>=0; j--){ let te = e_arr[j];
                   if(intersect(projRecHit, te)) {
                       let sameDirFacing = (te.x > pl.x) ? (b.dir===1) : (b.dir===-1); 
-                      // הבוס מס' 2 (Warden) חסין מקדימה כמו shield
-                      let isShielded = (te.ty==='shield' || te.bossType===2);
-                      
-                      if (isShielded && sameDirFacing && b.size < 40){ 
+                      if (te.ty==='shield' && sameDirFacing && b.size < 40){ 
                            b.dir*=-1; pr_arr.push({x:b.x, y:b.y, dx:b.dir*15, dy:0, age:150}); isDel=true; makeFX(b.x, b.y, 15, '#fff', 'spark'); doShake(1); break;
                       } 
                       te.hp-=b.dmg; makeFX(b.x,b.y,8,b.color,'boom'); isDel=true; doShake((b.dmg)/25); te.vx += b.dir*12;
@@ -699,7 +692,7 @@ function sysLoop() {
     for(let i=fx.length-1; i>=0; i--) { fx[i].x+=fx[i].vx; fx[i].vy+=0.1; fx[i].y+=fx[i].vy; fx[i].l--; if(fx[i].l<=0) fx.splice(i,1); }
     
     let cxT = pl.x - canvas.width/2 + 100; 
-    if(cxT<0) cxT=0; if(cxT > currentMap.length - canvas.width) cxT = currentMap.length - canvas.width;
+    if(cxT<0) cxT=0; if(cxT > STAGE_WIDTH - canvas.width) cxT = STAGE_WIDTH - canvas.width;
     camX += (cxT-camX)*0.08; 
     let S_X = camX, S_Y = 0; if(shakeV>0){ S_X+=(Math.random()-0.5)*shakeV; S_Y+=(Math.random()-0.5)*shakeV; shakeV*=0.8;} if(shakeV<0.4) shakeV=0;
     
