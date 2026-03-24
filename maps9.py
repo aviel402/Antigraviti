@@ -37,7 +37,6 @@ def generate_maps():
         if stage >= 9: allowed_enemies.append("tank")      
         if stage >= 12: allowed_enemies.append("ninja")    
         if stage >= 14: allowed_enemies.append("shield")   
-        if stage >= 16: allowed_enemies.append("summoner") 
 
         maps[stage] = {
             "name": f"SYSTEM OVERLORD" if is_boss else f"{themes[theme_index]['name']} - SECTOR {stage % 5 if stage % 5 != 0 else 5}",
