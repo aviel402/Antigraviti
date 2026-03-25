@@ -362,7 +362,7 @@ MENU_HTML = """
         <a href="/game6/" class="card"><span class="emoji-icon">🗝️</span><h2>מבוך הצללים</h2><div class="tag">הרפתקה אפלה</div></a>
         <a href="/game7/" class="card"><span class="emoji-icon">🔥</span><h2>PROXIMA</h2><div class="tag">אסטרטגיית חלל</div></a>
         <a href="/game8/" class="card"><span class="emoji-icon">🦠</span><h2>הטפיל</h2><div class="tag">החלפת גופות</div></a>
-        <a href="/game9/" class="card"><span class="emoji-icon">🍀</span><h2>CLOVER</h2><div class="tag">Action Platformer</div></a>
+        <a href="/game9/" class="card"><span class="emoji-icon">♣️</span><h2>CLOVER</h2><div class="tag">Action Platformer</div></a>
         <a href="/game10/" class="card"><span class="emoji-icon">⚡</span><h2>NEON RIDER</h2><div class="tag">מרוץ התחמקות רטרו</div></a>
         <a href="/game11/" class="card"><span class="emoji-icon">⚽</span><h2>Manager PRO</h2><div class="tag">ניהול כדורגל טקטי</div></a>
     </div>
