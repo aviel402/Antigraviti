@@ -383,6 +383,7 @@ app = DispatcherMiddleware(main_app, {
     '/game7': game7,
     '/game8': game8,
     '/game9': game9,
+    '/game9/x=v':game9,
     '/game10': game10,
     '/game11': game11,
     '/googlebf5e9f4bd69d6b9a.html':x(),
