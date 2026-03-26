@@ -5,7 +5,8 @@ from jinja2 import Environment, BaseLoader
 
 app = Flask(__name__)
 # מפתח הצפנה עבור עוגיות ה-Session 
-app.secret_key = "rpg_legend_sec ret_super_key_123"
+app.secret_key = "rpg_legend_secret_super_key_123"
+
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 30  
 
 # --- HTML TEMPLATE המשודרג עם תמונת הרקע ובוס סיום ---
