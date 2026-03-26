@@ -497,7 +497,8 @@ def start_combat(p):
     cave_demons =[("אריה הרים מטורף", 4), ("פיל מוזהב מטין כבד (שומר)", 6), ("שד מערות אכזרי", 8)]
     
     choice = random.choice(forest_animals) if p.location == "forest" else random.choice(cave_demons)
-    if choice[1] >= 6 and p.level < 5: choice = ("עטלף קרנבל ענקי טרף", 5) 
+    if choice[1] >= 6 and p.level < 5:
+        choice = ("עטלף קרנבל ענקי טרף", 5) 
 
     p.current_enemy = Enemy(choice[0], choice[1]); p.in_combat = True
     p.add_log(f"⚠️ הרגשת סכנה גדולה! {p.current_enemy.name} יוצא למתקפה עליך.")
@@ -529,7 +530,8 @@ def handle_combat_round(p):
         enemy_turn(p)
 
 def enemy_turn(p):
-    if p.hp <= 0: return 
+    if p.hp <= 0:
+        return 
     
     if random.random() > 0.85: 
         p.add_log(f"בלימה יפה! ברחת בזמן מתנופף והשבץ לא הגיע, התחמקת מנזק.")
