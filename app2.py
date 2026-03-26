@@ -418,7 +418,7 @@ def save_player(player):
 
 
 # ====================== ROUTES ======================
-@app.route('/game2/')
+@app.route('/')
 def home():
     p = load_player()
     if not p:
@@ -454,13 +454,13 @@ def home():
     return game_template.render(p=p, bg_color=bg_color, emoji_icon=icon, location_name=loc_name)
 
 
-@app.route('/game2/restart')
+@app.route('/restart')
 def restart():
     session.pop('rpg_legend_v3', None)
     return redirect('/game2/')
 
 
-@app.route('/game2/travel/<destination>')
+@app.route('/travel/<destination>')
 def travel(destination):
     p = load_player()
     if not p or p.hp <= 0 or p.in_combat or p.game_won:
@@ -476,7 +476,7 @@ def travel(destination):
     return redirect('/game2/')
 
 
-@app.route('/game2/shop/<action>')
+@app.route('/shop/<action>')
 def shop(action):
     p = load_player()
     if not p or p.location != "town" or p.game_won:
@@ -502,7 +502,7 @@ def shop(action):
     return redirect('/game2/')
 
 
-@app.route('/game2/action/<act>')
+@app.route('/action/<act>')
 def perform_action(act):
     p = load_player()
     if not p or p.hp <= 0 or p.game_won:
