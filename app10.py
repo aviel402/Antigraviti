@@ -1,16 +1,8 @@
 import random
-from flask import Flask, render_template_string, jsonify, request
+from flask import Flask, render_template_string
 
 app = Flask(__name__)
 app.secret_key = "neon_rider_secret"
-
-# Game configuration and levels
-game_config = {
-    "num_levels": 10,
-    "base_speed": 5,
-    "speed_increase": 0.5,
-    "base_obstacle_frequency": 0.05,
-}
 
 NEON_HTML = """
 <!DOCTYPE html>
@@ -18,140 +10,203 @@ NEON_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEON SYNTHWAVE RIDER</title>
+    <title>NEON SYNTHWAVE RIDER 2.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --neon-pink: #ff00ff;
             --neon-blue: #00ffff;
-            --bg-dark: #050505;
+            --neon-yellow: #ffff00;
+            --bg-dark: #050510;
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            background: var(--bg-dark);
-            color: white;
-            font-family: 'Orbitron', sans-serif;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
+            margin: 0; padding: 0; background: var(--bg-dark);
+            color: white; font-family: 'Orbitron', sans-serif;
+            overflow: hidden; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; height: 100vh;
+            user-select: none;
+        }
+
+        .game-container {
+            position: relative;
+            width: 800px; height: 600px;
         }
 
         canvas {
+            position: absolute; top: 0; left: 0;
             border: 4px solid var(--neon-blue);
-            box-shadow: 0 0 20px var(--neon-blue), inset 0 0 20px var(--neon-blue);
-            background: #000;
+            box-shadow: 0 0 30px var(--neon-blue), inset 0 0 30px var(--neon-blue);
+            background: linear-gradient(to bottom, #110022 0%, #000000 40%);
+            border-radius: 10px;
+        }
+
+        /* מניע מסך טלוויזיה ישן - אפקט מטורף בלי להכביד על הקנבס */
+        .crt-overlay {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 5;
+            border-radius: 10px;
         }
 
         .ui-layer {
-            position: absolute;
-            top: 20px;
-            width: 800px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 20px;
-            text-shadow: 0 0 10px var(--neon-pink);
-            pointer-events: none;
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between;
+            font-size: 22px; font-weight: 700; letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink);
+            pointer-events: none; z-index: 10;
         }
 
         .level-up {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 60px;
-            color: var(--neon-pink);
-            text-shadow: 0 0 20px var(--neon-pink);
-            display: none;
-            animation: fadeInOut 2s forwards;
-            pointer-events: none;
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 80px; color: var(--neon-yellow); font-weight: 900;
+            text-shadow: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-yellow);
+            display: none; animation: popUp 1.5s ease-out forwards;
+            pointer-events: none; z-index: 20; white-space: nowrap;
         }
 
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translate(-50%, -40%); }
-            20% { opacity: 1; transform: translate(-50%, -50%); }
-            80% { opacity: 1; transform: translate(-50%, -50%); }
-            100% { opacity: 0; transform: translate(-50%, -60%); }
+        @keyframes popUp {
+            0% { opacity: 0; transform: translate(-50%, -20%) scale(0.5); }
+            10% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -80%) scale(1.5); }
         }
 
-        .controls-hint {
-            position: absolute;
-            bottom: 20px;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 14px;
-        }
-        
         .start-screen {
-            position: absolute;
-            background: rgba(0,0,0,0.8);
-            width: 800px;
-            height: 600px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 15, 0.85); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+            border-radius: 10px; text-align: center;
+        }
+
+        .start-screen h1 {
+            color: var(--neon-blue); text-shadow: 0 0 20px var(--neon-blue), 0 0 40px var(--neon-pink);
+            font-size: 64px; margin: 0 0 20px 0; font-style: italic; letter-spacing: 5px;
         }
 
         .btn {
-            background: transparent;
-            border: 2px solid var(--neon-pink);
-            color: var(--neon-pink);
-            padding: 15px 40px;
-            font-family: inherit;
-            font-size: 24px;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 20px;
+            background: transparent; border: 3px solid var(--neon-pink);
+            color: white; padding: 15px 50px; text-transform: uppercase;
+            font-family: inherit; font-size: 28px; font-weight: bold;
+            cursor: pointer; transition: 0.3s; margin-top: 30px;
+            text-shadow: 0 0 10px var(--neon-pink); box-shadow: 0 0 15px rgba(255,0,255,0.4);
         }
 
         .btn:hover {
-            background: var(--neon-pink);
-            color: black;
-            box-shadow: 0 0 30px var(--neon-pink);
+            background: var(--neon-pink); color: black; text-shadow: none;
+            box-shadow: 0 0 40px var(--neon-pink), inset 0 0 20px white; transform: scale(1.05);
+        }
+
+        .controls-hint {
+            position: absolute; bottom: 15px; width: 100%; text-align: center;
+            color: rgba(255, 255, 255, 0.4); font-size: 14px; letter-spacing: 1px; z-index: 10;
+        }
+        
+        .screen-shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-3px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+            40%, 60% { transform: translate3d(8px, 0, 0); }
         }
     </style>
 </head>
 <body>
-    <div class="ui-layer">
-        <div>SCORE: <span id="score">0</span></div>
-        <div>LEVEL: <span id="level">1</span></div>
-        <div>BITS: <span id="bits">0</span></div>
+    <div class="game-container" id="container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div class="crt-overlay"></div>
+        
+        <div class="ui-layer">
+            <div>SCORE: <span id="score" style="color: var(--neon-blue);">0000</span></div>
+            <div>LEVEL: <span id="level" style="color: var(--neon-yellow);">1</span></div>
+            <div>MULTIPLIER: <span id="bits" style="color: var(--neon-pink);">x1</span></div>
+        </div>
+
+        <div id="start-screen" class="start-screen">
+            <h1>NEON OVERDRIVE</h1>
+            <p style="font-size: 18px; color: #ddd; max-width: 500px; line-height: 1.8;">
+                Welcome to 2084. Dodge the <span style="color:#f00; text-shadow:0 0 5px #f00">RED spikes</span>.<br>
+                Collect the <span style="color:#0ff; text-shadow:0 0 5px #0ff">BLUE cores</span> to increase score multiplier.<br>
+                Use Headphones for WebAudio Synth.
+            </p>
+            <button class="btn" onclick="startGame()">INITIATE SEQUENCE</button>
+        </div>
+
+        <div id="level-alert" class="level-up">MAX SPEED REACHED!</div>
+        <div class="controls-hint">ARROWS / A & D TO STEER • SURVIVE</div>
     </div>
-
-    <div id="start-screen" class="start-screen">
-        <h1 style="color: var(--neon-blue); text-shadow: 0 0 20px var(--neon-blue); font-size: 48px;">NEON RIDER</h1>
-        <p style="text-align: center; max-width: 400px; line-height: 1.6;">Dodge the RED triangles, collect the BLUE circles.</p>
-        <button class="btn" onclick="startGame()">START</button>
-    </div>
-
-    <div id="level-alert" class="level-up">LEVEL UP!</div>
-
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-
-    <div class="controls-hint">Use LEFT / RIGHT arrows or A / D to move</div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const levelEl = document.getElementById('level');
-        const bitsEl = document.getElementById('bits');
-        const alertEl = document.getElementById('level-alert');
-        const startScreen = document.getElementById('start-screen');
+        const container = document.getElementById('container');
+        
+        // --- WebAudio Synthesizer Engine (NO ASSETS NEEDED) ---
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
 
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            if (type === 'collect') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1600, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'explode') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(10, now + 0.5);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
+            } else if (type === 'levelup') {
+                osc.type = 'square';
+                [400, 600, 800, 1200].forEach((freq, i) => {
+                    setTimeout(() => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g); g.connect(audioCtx.destination);
+                        o.type = 'square'; o.frequency.value = freq;
+                        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                        o.start(); o.stop(audioCtx.currentTime + 0.1);
+                    }, i * 100);
+                });
+            }
+        }
+
+        // --- Game State & Variables ---
         let gameRunning = false;
-        let score = 0;
-        let level = 1;
-        let bits = 0;
-        let speed = 5;
-        let player = { x: 400, y: 550, w: 40, h: 20 };
-        let obstacles = [];
-        let lightBits = [];
+        let score = 0, level = 1, multiplier = 1, consecutiveBits = 0;
+        let baseSpeed = 6;
+        let globalZOffset = 0; // For grid animation
+        
+        let player = { 
+            x: 400, y: 520, vx: 0, w: 30, h: 40, trail: [] 
+        };
+        
+        let entities = [];
         let particles = [];
         let keys = {};
 
@@ -159,163 +214,259 @@ NEON_HTML = """
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
         function startGame() {
-            startScreen.style.display = 'none';
+            initAudio(); // Wake up WebAudio on user gesture
+            document.getElementById('start-screen').style.display = 'none';
+            container.classList.remove('screen-shake');
             gameRunning = true;
-            score = 0;
-            level = 1;
-            bits = 0;
-            speed = 5;
-            obstacles = [];
-            lightBits = [];
-            player.x = 400;
+            score = 0; level = 1; multiplier = 1; consecutiveBits = 0; baseSpeed = 7;
+            entities = []; particles = [];
+            player.x = 400; player.vx = 0; player.trail = [];
             requestAnimationFrame(gameLoop);
         }
 
-        function createExplosion(x, y, color) {
-            for(let i=0; i<15; i++) {
+        function createExplosion(x, y, color, amount=20) {
+            for(let i=0; i<amount; i++) {
                 particles.push({
                     x, y,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    life: 1.0,
-                    color
+                    vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15,
+                    life: 1.0, decay: Math.random() * 0.03 + 0.01, color, size: Math.random() * 5 + 2
                 });
             }
+        }
+
+        function spawnEntity() {
+            // Spawn logic based on level
+            let r = Math.random();
+            if(r < 0.06 + (level * 0.005)) { // Red Spike
+                entities.push({ type: 'obstacle', x: Math.random() * 700 + 50, y: -50, w: 35, h: 35, dead: false });
+            }
+            if(Math.random() < 0.04) { // Blue Core
+                entities.push({ type: 'bit', x: Math.random() * 700 + 50, y: -50, r: 12, dead: false });
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = String(Math.floor(score)).padStart(5, '0');
+            document.getElementById('level').innerText = level;
+            document.getElementById('bits').innerText = 'x' + multiplier;
+            if(multiplier > 1) document.getElementById('bits').style.textShadow = '0 0 20px var(--neon-yellow)';
+            else document.getElementById('bits').style.textShadow = '0 0 10px var(--neon-pink)';
         }
 
         function gameLoop() {
             if(!gameRunning) return;
 
-            // Update
-            if(keys['arrowleft'] || keys['a']) player.x -= 8;
-            if(keys['arrowright'] || keys['d']) player.x += 8;
-            player.x = Math.max(20, Math.min(780 - player.w, player.x));
+            // Physics & Movement (Inertia/Momentum)
+            player.vx *= 0.85; // Friction
+            if(keys['arrowleft'] || keys['a']) player.vx -= 1.8;
+            if(keys['arrowright'] || keys['d']) player.vx += 1.8;
+            player.x += player.vx;
+            
+            // Wall bounce
+            if(player.x < 30) { player.x = 30; player.vx *= -0.5; }
+            if(player.x > 770 - player.w) { player.x = 770 - player.w; player.vx *= -0.5; }
 
-            // Spawn
-            if(Math.random() < 0.05 + (level * 0.01)) {
-                obstacles.push({ x: Math.random() * 760 + 20, y: -50, w: 30, h: 30 });
-            }
-            if(Math.random() < 0.03) {
-                lightBits.push({ x: Math.random() * 760 + 20, y: -50, r: 10 });
-            }
+            // Player Trail
+            player.trail.push({x: player.x, y: player.y});
+            if(player.trail.length > 15) player.trail.shift();
 
-            // Move & Check collisions
-            obstacles.forEach((obs, i) => {
-                obs.y += speed;
-                if(obs.y > 650) {
-                    obstacles.splice(i, 1);
-                    score += 10;
+            // Scrolling background Grid
+            globalZOffset = (globalZOffset + baseSpeed) % 40;
+
+            spawnEntity();
+
+            // Entities update
+            entities.forEach(ent => {
+                ent.y += baseSpeed * (ent.type === 'bit' ? 1 : 1.2); // Obstacles fall slightly faster
+                
+                // Out of bounds
+                if(ent.y > 650) {
+                    ent.dead = true;
+                    if(ent.type === 'obstacle') score += 10 * multiplier;
+                    if(ent.type === 'bit') { multiplier = 1; consecutiveBits = 0; } // Reset multiplier on miss
                 }
-                if(collide(player, obs)) {
-                    gameRunning = false;
-                    createExplosion(player.x + 20, player.y, '#ff0000');
-                    setTimeout(() => {
-                        startScreen.style.display = 'flex';
-                        startScreen.querySelector('h1').innerText = 'GAME OVER';
-                        startScreen.querySelector('p').innerText = 'Final Score: ' + score;
-                    }, 1000);
+
+                // Collisions (using Center points for better feeling hitboxes)
+                let px = player.x + player.w/2; let py = player.y + player.h/2;
+                if(!ent.dead) {
+                    if(ent.type === 'obstacle') {
+                        let dist = Math.hypot(px - (ent.x + ent.w/2), py - (ent.y + ent.h/2));
+                        if(dist < 22) { // Hit
+                            gameRunning = false;
+                            playSound('explode');
+                            createExplosion(px, py, '#ff0055', 50);
+                            container.classList.add('screen-shake');
+                            setTimeout(() => {
+                                document.getElementById('start-screen').style.display = 'flex';
+                                document.querySelector('.start-screen h1').innerText = 'SYSTEM FAILURE';
+                                document.querySelector('.start-screen p').innerHTML = `FINAL SCORE: <b style="color:var(--neon-yellow); font-size:24px">${Math.floor(score)}</b>`;
+                            }, 1500);
+                        }
+                    } else if(ent.type === 'bit') {
+                        let dist = Math.hypot(px - ent.x, py - ent.y);
+                        if(dist < 30) { // Collect
+                            ent.dead = true;
+                            consecutiveBits++;
+                            if(consecutiveBits % 3 === 0 && multiplier < 10) multiplier++;
+                            score += 50 * multiplier;
+                            playSound('collect');
+                            createExplosion(ent.x, ent.y, '#00ffff', 10);
+                        }
+                    }
                 }
             });
 
-            lightBits.forEach((bit, i) => {
-                bit.y += speed;
-                if(bit.y > 650) lightBits.splice(i, 1);
-                if(Math.hypot(player.x + 20 - bit.x, player.y + 10 - bit.y) < 25) {
-                    lightBits.splice(i, 1);
-                    bits++;
-                    score += 50;
-                    createExplosion(bit.x, bit.y, '#00ffff');
-                }
-            });
+            // Cleanup dead entities
+            entities = entities.filter(ent => !ent.dead);
 
-            particles.forEach((p, i) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.02;
-                if(p.life <= 0) particles.splice(i, 1);
+            // Particles update
+            particles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                p.life -= p.decay;
+                p.vx *= 0.95; p.vy *= 0.95;
             });
+            particles = particles.filter(p => p.life > 0);
 
-            // Level Up
-            if(score > level * level * 500) {
+            // Level Up logic
+            if(score > level * level * 800) {
                 level++;
-                speed += 0.8;
-                alertLevelUp();
+                baseSpeed += 0.8;
+                playSound('levelup');
+                let alertEl = document.getElementById('level-alert');
+                alertEl.style.display = 'block';
+                alertEl.style.animation = 'none';
+                void alertEl.offsetWidth; // trigger reflow
+                alertEl.style.animation = 'popUp 1.5s ease-out forwards';
+                setTimeout(() => { alertEl.style.display = 'none'; }, 1500);
             }
 
-            // UI
-            scoreEl.innerText = score;
-            levelEl.innerText = level;
-            bitsEl.innerText = bits;
-
+            score += 0.1 * multiplier; // Passive score
+            updateUI();
             draw();
             requestAnimationFrame(gameLoop);
         }
 
-        function alertLevelUp() {
-            alertEl.style.display = 'block';
-            setTimeout(() => { alertEl.style.display = 'none'; }, 2000);
-        }
-
-        function collide(r1, r2) {
-            return r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y;
-        }
-
         function draw() {
-            ctx.fillStyle = gameRunning ? '#000' : '#100';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Grid lines (Parallax)
-            ctx.strokeStyle = '#222';
-            ctx.lineWidth = 1;
-            for(let i=0; i<canvas.width; i+=40) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i, canvas.height);
-                ctx.stroke();
-            }
-            for(let i=(score % 40); i<canvas.height; i+=40) {
-                ctx.beginPath();
-                ctx.moveTo(0, i);
-                ctx.lineTo(canvas.width, i);
-                ctx.stroke();
-            }
-
-            // Player
-            ctx.fillStyle = '#fff';
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#fff';
-            ctx.fillRect(player.x, player.y, player.w, player.h);
+            // === 1. Draw Synthwave Sun ===
+            const sunY = 180;
+            const gradient = ctx.createLinearGradient(0, sunY-120, 0, sunY+120);
+            gradient.addColorStop(0, '#ffff00'); gradient.addColorStop(0.5, '#ff00ff'); gradient.addColorStop(1, '#aa00ff');
+            ctx.fillStyle = gradient;
+            ctx.beginPath(); ctx.arc(400, sunY, 120, 0, Math.PI * 2); ctx.fill();
             
-            // Obstacles
-            ctx.fillStyle = '#f00';
-            ctx.shadowColor = '#f00';
-            obstacles.forEach(obs => {
+            // Sun grid cutouts (Classic 80s effect)
+            ctx.fillStyle = '#000'; // Match background
+            for(let i=0; i<6; i++) {
+                let h = 3 + i*1.5;
+                ctx.fillRect(250, sunY + 20 + i*16, 300, h);
+            }
+
+            // === 2. Draw Pseudo-3D Ground Grid ===
+            ctx.strokeStyle = 'rgba(255, 0, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            // Horizon Line
+            const horizon = 300;
+            ctx.moveTo(0, horizon); ctx.lineTo(800, horizon);
+            
+            // Vertical lines converging
+            for(let i=-20; i<=20; i++) {
+                let xTop = 400 + i*15;
+                let xBottom = 400 + i*60;
+                ctx.moveTo(xTop, horizon); ctx.lineTo(xBottom, 600);
+            }
+            
+            // Horizontal moving lines (Parallax projection effect)
+            for(let y = horizon + (globalZOffset * 0.1); y < 600; y += (y - horizon) * 0.1 + 1) {
+                ctx.moveTo(0, y); ctx.lineTo(800, y);
+            }
+            ctx.stroke();
+
+            // Glow Setup
+            ctx.globalCompositeOperation = "lighter";
+
+            // === 3. Draw Player Trail ===
+            if(gameRunning) {
                 ctx.beginPath();
-                ctx.moveTo(obs.x, obs.y + obs.h);
-                ctx.lineTo(obs.x + obs.w / 2, obs.y);
-                ctx.lineTo(obs.x + obs.w, obs.y + obs.h);
-                ctx.fill();
+                for(let i=0; i<player.trail.length; i++) {
+                    let pt = player.trail[i];
+                    ctx.lineTo(pt.x + player.w/2, pt.y + player.h);
+                }
+                ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+                ctx.lineWidth = 10;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00ffff';
+                ctx.stroke();
+            }
+
+            ctx.shadowBlur = 20;
+
+            // === 4. Draw Entities ===
+            entities.forEach(ent => {
+                if(ent.type === 'obstacle') {
+                    ctx.shadowColor = '#ff0055'; ctx.fillStyle = '#ff0055';
+                    ctx.beginPath();
+                    ctx.moveTo(ent.x + ent.w/2, ent.y); // Top
+                    ctx.lineTo(ent.x + ent.w, ent.y + ent.h); // Bottom Right
+                    ctx.lineTo(ent.x, ent.y + ent.h); // Bottom Left
+                    ctx.closePath();
+                    ctx.fill();
+                    // Inner bright core
+                    ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 0;
+                    ctx.beginPath();
+                    ctx.moveTo(ent.x + ent.w/2, ent.y + 10);
+                    ctx.lineTo(ent.x + ent.w - 8, ent.y + ent.h - 5);
+                    ctx.lineTo(ent.x + 8, ent.y + ent.h - 5);
+                    ctx.fill();
+                    ctx.shadowBlur = 20; // reset
+                } else if(ent.type === 'bit') {
+                    ctx.shadowColor = '#00ffff'; ctx.fillStyle = '#00ffff';
+                    ctx.beginPath();
+                    ctx.arc(ent.x, ent.y, ent.r, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Pulse ring
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(ent.x, ent.y, ent.r + (Math.sin(Date.now()*0.01)*5 + 5), 0, Math.PI*2);
+                    ctx.stroke();
+                }
             });
 
-            // Light Bits
-            ctx.fillStyle = '#0ff';
-            ctx.shadowColor = '#0ff';
-            lightBits.forEach(bit => {
-                ctx.beginPath();
-                ctx.arc(bit.x, bit.y, bit.r, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // Particles
+            // === 5. Draw Particles ===
             particles.forEach(p => {
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.shadowColor = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
             });
-            ctx.globalAlpha = 1;
-            ctx.shadowBlur = 0;
-        }
+            ctx.globalAlpha = 1.0;
 
+            // === 6. Draw Player Spaceship ===
+            if (gameRunning || particles.length < 40) { // Don't draw if heavily exploded
+                ctx.shadowColor = '#fff'; ctx.fillStyle = '#eef';
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.w/2, player.y);
+                ctx.lineTo(player.x + player.w + (player.vx*2), player.y + player.h);
+                ctx.lineTo(player.x + player.w/2, player.y + player.h - 10); // indent
+                ctx.lineTo(player.x - (player.vx*2), player.y + player.h);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Engine flame
+                ctx.shadowColor = '#ff00ff'; ctx.fillStyle = '#ff00ff';
+                ctx.beginPath();
+                ctx.arc(player.x + player.w/2, player.y + player.h - 5, Math.random()*5+3, 0, Math.PI*2);
+                ctx.fill();
+            }
+            
+            ctx.globalCompositeOperation = "source-over"; // Reset blend mode
+            ctx.shadowBlur = 0; // Reset shadows for performance
+        }
+        
+        // Initial drawing
         draw();
     </script>
 </body>
@@ -327,4 +478,5 @@ def index():
     return render_template_string(NEON_HTML)
 
 if __name__ == '__main__':
+    # You might want to switch debug to False in production
     app.run(port=5010, debug=True)
