@@ -10,7 +10,7 @@ NEON_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEON SYNTHWAVE RIDER 2.0</title>
+    <title>NEON SYNTHWAVE RIDER 2.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -66,7 +66,7 @@ NEON_HTML = """
             position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
             font-size: 80px; color: var(--neon-yellow); font-weight: 900;
             text-shadow: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-yellow);
-            display: none; animation: popUp 1.5s ease-out forwards;
+            display: none;
             pointer-events: none; z-index: 20; white-space: nowrap;
         }
 
@@ -136,12 +136,11 @@ NEON_HTML = """
             <p style="font-size: 18px; color: #ddd; max-width: 500px; line-height: 1.8;">
                 Welcome to 2084. Dodge the <span style="color:#f00; text-shadow:0 0 5px #f00">RED spikes</span>.<br>
                 Collect the <span style="color:#0ff; text-shadow:0 0 5px #0ff">BLUE cores</span> to increase score multiplier.<br>
-                Use Headphones for WebAudio Synth.
             </p>
             <button class="btn" onclick="startGame()">INITIATE SEQUENCE</button>
         </div>
 
-        <div id="level-alert" class="level-up">MAX SPEED REACHED!</div>
+        <div id="level-alert" class="level-up">LEVEL UP!</div>
         <div class="controls-hint">ARROWS / A & D TO STEER • SURVIVE</div>
     </div>
 
@@ -184,6 +183,7 @@ NEON_HTML = """
                 osc.type = 'square';
                 [400, 600, 800, 1200].forEach((freq, i) => {
                     setTimeout(() => {
+                        if(audioCtx.state === 'closed') return;
                         const o = audioCtx.createOscillator();
                         const g = audioCtx.createGain();
                         o.connect(g); g.connect(audioCtx.destination);
@@ -199,8 +199,8 @@ NEON_HTML = """
         // --- Game State & Variables ---
         let gameRunning = false;
         let score = 0, level = 1, multiplier = 1, consecutiveBits = 0;
-        let baseSpeed = 6;
-        let globalZOffset = 0; // For grid animation
+        let baseSpeed = 4; // <--- תיקון: הופחת מ-7 ל-4 להתחלה רגועה יותר
+        let globalZOffset = 0; 
         
         let player = { 
             x: 400, y: 520, vx: 0, w: 30, h: 40, trail: [] 
@@ -214,11 +214,12 @@ NEON_HTML = """
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
         function startGame() {
-            initAudio(); // Wake up WebAudio on user gesture
+            initAudio(); 
             document.getElementById('start-screen').style.display = 'none';
             container.classList.remove('screen-shake');
             gameRunning = true;
-            score = 0; level = 1; multiplier = 1; consecutiveBits = 0; baseSpeed = 7;
+            score = 0; level = 1; multiplier = 1; consecutiveBits = 0; 
+            baseSpeed = 4; // תיקון מהירות התחלתית
             entities = []; particles = [];
             player.x = 400; player.vx = 0; player.trail = [];
             requestAnimationFrame(gameLoop);
@@ -235,12 +236,12 @@ NEON_HTML = """
         }
 
         function spawnEntity() {
-            // Spawn logic based on level
             let r = Math.random();
-            if(r < 0.06 + (level * 0.005)) { // Red Spike
+            // הגברנו מעט את הסיכוי להופעת מכשולים כדי שלא יהיה "ריק" מידי כשהמהירות נמוכה
+            if(r < 0.06 + (level * 0.006)) { 
                 entities.push({ type: 'obstacle', x: Math.random() * 700 + 50, y: -50, w: 35, h: 35, dead: false });
             }
-            if(Math.random() < 0.04) { // Blue Core
+            if(Math.random() < 0.05) { 
                 entities.push({ type: 'bit', x: Math.random() * 700 + 50, y: -50, r: 12, dead: false });
             }
         }
@@ -256,10 +257,10 @@ NEON_HTML = """
         function gameLoop() {
             if(!gameRunning) return;
 
-            // Physics & Movement (Inertia/Momentum)
-            player.vx *= 0.85; // Friction
-            if(keys['arrowleft'] || keys['a']) player.vx -= 1.8;
-            if(keys['arrowright'] || keys['d']) player.vx += 1.8;
+            // Physics & Movement 
+            player.vx *= 0.80; // <--- תיקון: חיכוך מוגבר (80 במקום 85) לשליטה הדוקה ועצירה מהירה יותר
+            if(keys['arrowleft'] || keys['a']) player.vx -= 1.6; // תיקון האצה
+            if(keys['arrowright'] || keys['d']) player.vx += 1.6;
             player.x += player.vx;
             
             // Wall bounce
@@ -277,16 +278,17 @@ NEON_HTML = """
 
             // Entities update
             entities.forEach(ent => {
-                ent.y += baseSpeed * (ent.type === 'bit' ? 1 : 1.2); // Obstacles fall slightly faster
+                // <--- תיקון: הקטנת מהירות הנפילה היחסית של המשולשים מ-1.2 ל-1.15 כדי לתת יותר זמן תגובה
+                ent.y += baseSpeed * (ent.type === 'bit' ? 1 : 1.15); 
                 
                 // Out of bounds
                 if(ent.y > 650) {
                     ent.dead = true;
                     if(ent.type === 'obstacle') score += 10 * multiplier;
-                    if(ent.type === 'bit') { multiplier = 1; consecutiveBits = 0; } // Reset multiplier on miss
+                    if(ent.type === 'bit') { multiplier = 1; consecutiveBits = 0; }
                 }
 
-                // Collisions (using Center points for better feeling hitboxes)
+                // Collisions 
                 let px = player.x + player.w/2; let py = player.y + player.h/2;
                 if(!ent.dead) {
                     if(ent.type === 'obstacle') {
@@ -328,9 +330,9 @@ NEON_HTML = """
             particles = particles.filter(p => p.life > 0);
 
             // Level Up logic
-            if(score > level * level * 800) {
+            if(score > level * level * 600) { // תיקון: הורדנו קצת את יעד הניקוד לשלב כי הניקוד עולה לאט יותר
                 level++;
-                baseSpeed += 0.8;
+                baseSpeed += 0.4; // <--- תיקון: המהירות עולה רק ב-0.4 (ולא 0.8) בכל שלב
                 playSound('levelup');
                 let alertEl = document.getElementById('level-alert');
                 alertEl.style.display = 'block';
@@ -340,7 +342,7 @@ NEON_HTML = """
                 setTimeout(() => { alertEl.style.display = 'none'; }, 1500);
             }
 
-            score += 0.1 * multiplier; // Passive score
+            score += 0.1 * multiplier; 
             updateUI();
             draw();
             requestAnimationFrame(gameLoop);
@@ -349,46 +351,38 @@ NEON_HTML = """
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // === 1. Draw Synthwave Sun ===
             const sunY = 180;
             const gradient = ctx.createLinearGradient(0, sunY-120, 0, sunY+120);
             gradient.addColorStop(0, '#ffff00'); gradient.addColorStop(0.5, '#ff00ff'); gradient.addColorStop(1, '#aa00ff');
             ctx.fillStyle = gradient;
             ctx.beginPath(); ctx.arc(400, sunY, 120, 0, Math.PI * 2); ctx.fill();
             
-            // Sun grid cutouts (Classic 80s effect)
-            ctx.fillStyle = '#000'; // Match background
+            ctx.fillStyle = '#000'; 
             for(let i=0; i<6; i++) {
                 let h = 3 + i*1.5;
                 ctx.fillRect(250, sunY + 20 + i*16, 300, h);
             }
 
-            // === 2. Draw Pseudo-3D Ground Grid ===
             ctx.strokeStyle = 'rgba(255, 0, 255, 0.3)';
             ctx.lineWidth = 2;
             ctx.beginPath();
             
-            // Horizon Line
             const horizon = 300;
             ctx.moveTo(0, horizon); ctx.lineTo(800, horizon);
             
-            // Vertical lines converging
             for(let i=-20; i<=20; i++) {
                 let xTop = 400 + i*15;
                 let xBottom = 400 + i*60;
                 ctx.moveTo(xTop, horizon); ctx.lineTo(xBottom, 600);
             }
             
-            // Horizontal moving lines (Parallax projection effect)
             for(let y = horizon + (globalZOffset * 0.1); y < 600; y += (y - horizon) * 0.1 + 1) {
                 ctx.moveTo(0, y); ctx.lineTo(800, y);
             }
             ctx.stroke();
 
-            // Glow Setup
             ctx.globalCompositeOperation = "lighter";
 
-            // === 3. Draw Player Trail ===
             if(gameRunning) {
                 ctx.beginPath();
                 for(let i=0; i<player.trail.length; i++) {
@@ -404,30 +398,27 @@ NEON_HTML = """
 
             ctx.shadowBlur = 20;
 
-            // === 4. Draw Entities ===
             entities.forEach(ent => {
                 if(ent.type === 'obstacle') {
                     ctx.shadowColor = '#ff0055'; ctx.fillStyle = '#ff0055';
                     ctx.beginPath();
-                    ctx.moveTo(ent.x + ent.w/2, ent.y); // Top
-                    ctx.lineTo(ent.x + ent.w, ent.y + ent.h); // Bottom Right
-                    ctx.lineTo(ent.x, ent.y + ent.h); // Bottom Left
+                    ctx.moveTo(ent.x + ent.w/2, ent.y); 
+                    ctx.lineTo(ent.x + ent.w, ent.y + ent.h); 
+                    ctx.lineTo(ent.x, ent.y + ent.h); 
                     ctx.closePath();
                     ctx.fill();
-                    // Inner bright core
                     ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 0;
                     ctx.beginPath();
                     ctx.moveTo(ent.x + ent.w/2, ent.y + 10);
                     ctx.lineTo(ent.x + ent.w - 8, ent.y + ent.h - 5);
                     ctx.lineTo(ent.x + 8, ent.y + ent.h - 5);
                     ctx.fill();
-                    ctx.shadowBlur = 20; // reset
+                    ctx.shadowBlur = 20; 
                 } else if(ent.type === 'bit') {
                     ctx.shadowColor = '#00ffff'; ctx.fillStyle = '#00ffff';
                     ctx.beginPath();
                     ctx.arc(ent.x, ent.y, ent.r, 0, Math.PI * 2);
                     ctx.fill();
-                    // Pulse ring
                     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.arc(ent.x, ent.y, ent.r + (Math.sin(Date.now()*0.01)*5 + 5), 0, Math.PI*2);
@@ -435,7 +426,6 @@ NEON_HTML = """
                 }
             });
 
-            // === 5. Draw Particles ===
             particles.forEach(p => {
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.color;
@@ -444,29 +434,26 @@ NEON_HTML = """
             });
             ctx.globalAlpha = 1.0;
 
-            // === 6. Draw Player Spaceship ===
-            if (gameRunning || particles.length < 40) { // Don't draw if heavily exploded
+            if (gameRunning || particles.length < 40) {
                 ctx.shadowColor = '#fff'; ctx.fillStyle = '#eef';
                 ctx.beginPath();
                 ctx.moveTo(player.x + player.w/2, player.y);
                 ctx.lineTo(player.x + player.w + (player.vx*2), player.y + player.h);
-                ctx.lineTo(player.x + player.w/2, player.y + player.h - 10); // indent
+                ctx.lineTo(player.x + player.w/2, player.y + player.h - 10); 
                 ctx.lineTo(player.x - (player.vx*2), player.y + player.h);
                 ctx.closePath();
                 ctx.fill();
                 
-                // Engine flame
                 ctx.shadowColor = '#ff00ff'; ctx.fillStyle = '#ff00ff';
                 ctx.beginPath();
                 ctx.arc(player.x + player.w/2, player.y + player.h - 5, Math.random()*5+3, 0, Math.PI*2);
                 ctx.fill();
             }
             
-            ctx.globalCompositeOperation = "source-over"; // Reset blend mode
-            ctx.shadowBlur = 0; // Reset shadows for performance
+            ctx.globalCompositeOperation = "source-over"; 
+            ctx.shadowBlur = 0; 
         }
         
-        // Initial drawing
         draw();
     </script>
 </body>
@@ -478,5 +465,4 @@ def index():
     return render_template_string(NEON_HTML)
 
 if __name__ == '__main__':
-    # You might want to switch debug to False in production
     app.run(port=5010, debug=True)
