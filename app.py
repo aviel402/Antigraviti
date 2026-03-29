@@ -371,7 +371,155 @@ MENU_HTML = """
 </body>
 </html>
 """
+def rrr():
+    y = Flask(__name__)
+    @y.route('/')
+    def index():return '''
 
+<!DOCTYPE html><html lang=en><head><title>Tiger Simulator 3D</title><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name=description content="Tigers are one of the most beautiful and strong animals. In this game you will play for one of the tigers. You can create a large family of tigers, travel the open world and perform various tasks.Create your own tiger and go in search of adventure. Hunt for animals, start a family, improve your tiger and family members. Do different tasks and become stronger.TIGER FAMILYIf you find another tiger you will be able to create a family. With the development of the character, the opportunity to make children becomes available. You can make up to 4 children. Your family can help you in combat and hunting. There is an opportunity to improve each family member. To do this, it is necessary to hunt and collect food, and then feed the children or your consort.TIGER CUSTOMIZATIONCustomize the appearance of the tiger as you like. There are several skins to choose from. You can also customize skins for your consort and children. For fans of funny hats there is the opportunity to wear a variety of different hats!UPGRADESThere is an opportunity to improve the individual characteristics of family members and characteristics that affect all tigers in the family at once. Do not forget to improve the characters! Get experience doing tasks and hunting. After receiving a level, the character can spend it on points of attack, energy or life. There are also special skills that allow you to increase speed, collect more food, get more resources for actions in the game, etc.VARIOUS CREATURESIn your journey you will see many different creatures. Some of them are peaceful, and some are very dangerous. Also, the tigers will fight dangerous bosses.QUESTSTake part in various tasks. Sometimes you will need to hunt animals, sometimes look for ancient artifacts, and sometimes have fun, launching fireworks. You never know what the quest characters will ask you to do.Follow us on Twitter:https://twitter.com/CyberGoldfinchHave fun in the Tiger Simulator 3D!"><meta name=keywords content=animal,rpg,survival,hunt,3d><meta property=og:type content=website><meta property=og:title content="Tiger Simulator 3D"><meta property=og:description content="Tigers are one of the most beautiful and strong animals. In this game you will play for one of the tigers. You can create a large family of tigers, travel the open world and perform various tasks.Create your own tiger and go in search of adventure. Hunt for animals, start a family, improve your tiger and family members. Do different tasks and become stronger.TIGER FAMILYIf you find another tiger you will be able to create a family. With the development of the character, the opportunity to make children becomes available. You can make up to 4 children. Your family can help you in combat and hunting. There is an opportunity to improve each family member. To do this, it is necessary to hunt and collect food, and then feed the children or your consort.TIGER CUSTOMIZATIONCustomize the appearance of the tiger as you like. There are several skins to choose from. You can also customize skins for your consort and children. For fans of funny hats there is the opportunity to wear a variety of different hats!UPGRADESThere is an opportunity to improve the individual characteristics of family members and characteristics that affect all tigers in the family at once. Do not forget to improve the characters! Get experience doing tasks and hunting. After receiving a level, the character can spend it on points of attack, energy or life. There are also special skills that allow you to increase speed, collect more food, get more resources for actions in the game, etc.VARIOUS CREATURESIn your journey you will see many different creatures. Some of them are peaceful, and some are very dangerous. Also, the tigers will fight dangerous bosses.QUESTSTake part in various tasks. Sometimes you will need to hunt animals, sometimes look for ancient artifacts, and sometimes have fun, launching fireworks. You never know what the quest characters will ask you to do.Follow us on Twitter:https://twitter.com/CyberGoldfinchHave fun in the Tiger Simulator 3D!"><meta property=og:image content=https://img.gamedistribution.com/3e8831ba57bb4b559f8a84e95f7698fc.jpg><meta property=og:url content=https://html5.gamedistribution.com/3e8831ba57bb4b559f8a84e95f7698fc/ ><link rel=canonical href=https://html5.gamedistribution.com/3e8831ba57bb4b559f8a84e95f7698fc/ ><link rel=manifest href=manifest_1.5.18.json><link rel=preconnect href=https://html5.api.gamedistribution.com><link rel=preconnect href=https://game.api.gamedistribution.com><link rel=preconnect href=https://pm.gamedistribution.com><script type=text/javascript>if ('serviceWorker' in navigator) {
+    navigator
+      .serviceWorker
+      .register(`/sw_1.5.18.js`)
+      .then(function () {
+        console.log('SW registered...');
+      })
+      .catch(err => {
+        console.log('SW not registered...', err.message);
+      });
+  }</script><script type=application/ld+json>{
+  "@context": "http://schema.org",
+  "@type": "Game",
+  "name": "Tiger Simulator 3D",
+  "url": "https://html5.gamedistribution.com/3e8831ba57bb4b559f8a84e95f7698fc/",
+  "image": "https://img.gamedistribution.com/3e8831ba57bb4b559f8a84e95f7698fc.jpg",    
+  "description": "Tigers are one of the most beautiful and strong animals. In this game you will play for one of the tigers. You can create a large family of tigers, travel the open world and perform various tasks.Create your own tiger and go in search of adventure. Hunt for animals, start a family, improve your tiger and family members. Do different tasks and become stronger.TIGER FAMILYIf you find another tiger you will be able to create a family. With the development of the character, the opportunity to make children becomes available. You can make up to 4 children. Your family can help you in combat and hunting. There is an opportunity to improve each family member. To do this, it is necessary to hunt and collect food, and then feed the children or your consort.TIGER CUSTOMIZATIONCustomize the appearance of the tiger as you like. There are several skins to choose from. You can also customize skins for your consort and children. For fans of funny hats there is the opportunity to wear a variety of different hats!UPGRADESThere is an opportunity to improve the individual characteristics of family members and characteristics that affect all tigers in the family at once. Do not forget to improve the characters! Get experience doing tasks and hunting. After receiving a level, the character can spend it on points of attack, energy or life. There are also special skills that allow you to increase speed, collect more food, get more resources for actions in the game, etc.VARIOUS CREATURESIn your journey you will see many different creatures. Some of them are peaceful, and some are very dangerous. Also, the tigers will fight dangerous bosses.QUESTSTake part in various tasks. Sometimes you will need to hunt animals, sometimes look for ancient artifacts, and sometimes have fun, launching fireworks. You never know what the quest characters will ask you to do.Follow us on Twitter:https://twitter.com/CyberGoldfinchHave fun in the Tiger Simulator 3D!",
+  "creator":{
+    "name":"CyberGoldfinch"
+    
+    },
+  "publisher":{
+    "name":"GameDistribution",
+    "url":"https://gamedistribution.com/games/tiger-simulator-3d"
+    },
+  "genre":[
+      "animal",
+      "rpg",
+      "survival",
+      "hunt",
+      "3d"
+  ]
+}</script><style>html{height:100%}body{margin:0;padding:0;background-color:#000;overflow:hidden;height:100%}#game{position:absolute;top:0;left:0;width:0;height:0;overflow:hidden;max-width:100%;max-height:100%;min-width:100%;min-height:100%;box-sizing:border-box}</style></head><body><iframe id=game frameborder=0 allow=autoplay allowfullscreen seamless scrolling=no></iframe><script type=text/javascript>(function () {
+    function GameLoader() {
+      this.init = function () {
+        this._gameId = "3e8831ba57bb4b559f8a84e95f7698fc";
+        this._container = document.getElementById("game");
+        this._loader = this._getLoaderData();
+        this._hasImpression = false;
+        this._hasSuccess = false;
+        this._insertGameSDK();
+        this._softgamesDomains = this._getDomainData();
+      };
+
+      this._getLoaderData = function () {
+        return {"enabled":true,"sdk_version":"1.15.2","_":55};
+      }
+
+      this._getDomainData = function(){
+        return [{"name":"minigame.aeriagames.jp","id":4217},{"name":"localhost:8080","id":4217},{"name":"minigame-stg.aeriagames.jp","id":4217}];
+      }
+
+      this._insertGameSDK = function () {
+        if (!this._gameId) return;
+
+        window["GD_OPTIONS"] = {
+          gameId: this._gameId,
+          loader: this._loader,
+          onLoaderEvent: this._onLoaderEvent.bind(this),
+          onEvent: this._onEvent.bind(this)
+        };
+
+        (function (d, s, id) {
+          var js,fjs = d.getElementsByTagName(s)[0];
+          if (d.getElementById(id)) return;
+          js = d.createElement(s);
+          js.id = id;
+          js.src = "https://html5.api.gamedistribution.com/main.min.js";
+          fjs.parentNode.insertBefore(js, fjs);
+        })(document, "script", "gamedistribution-jssdk");
+      };
+
+      this._loadGame = function (options) {
+
+        if (this._container_initialized) {
+          return;
+        }
+
+        var formatTokenURLSearch = this._bridge.exports.formatTokenURLSearch;
+        var extendUrlQuery = this._bridge.exports.extendUrlQuery;
+        var base64Encode = this._bridge.exports.base64Encode;
+        const ln_param = new URLSearchParams(window.location.search).get('lang');
+
+        var data = {
+          parentURL: this._bridge.parentURL,
+          parentDomain: this._bridge.parentDomain,
+          topDomain: this._bridge.topDomain,
+          hasImpression: options.hasImpression,
+          loaderEnabled: true,
+          host: window.location.hostname,
+          version: "1.5.18"
+        };
+
+        var searchPart = formatTokenURLSearch(data);
+        var gameSrc = "//html5.gamedistribution.com/rvvASMiM/3e8831ba57bb4b559f8a84e95f7698fc/index.html" + searchPart;
+        this._container.src = gameSrc;
+
+        this._container.onload = this._onFrameLoaded.bind(this);
+
+        this._container_initialized = true;
+      };
+
+      this._onLoaderEvent = function (event) {
+        switch (event.name) {
+          case "LOADER_DATA":
+            this._bridge = event.message.bridge;
+            this._game = event.message.game;
+            break;
+        }
+      };
+
+      this._onEvent = function (event) {
+        switch (event.name) {
+          case "SDK_GAME_START":
+            this._bridge && this._loadGame({hasImpression: this._hasImpression});
+            break;
+          case "AD_ERROR":
+          case "AD_SDK_CANCELED":
+            this._hasImpression = false || this._hasSuccess;
+            break;
+          case "ALL_ADS_COMPLETED":
+          case "COMPLETE":
+          case "USER_CLOSE":
+          case "SKIPPED":
+            this._hasImpression = true;
+            this._hasSuccess = true;
+            break;
+        }
+      };
+
+      this._onFrameLoaded=function(event){
+        var container=this._container;
+        setTimeout(function(){
+          try{
+            container.contentWindow.focus();
+          }catch(err){
+          }
+        },100);
+      }
+    }
+    new GameLoader().init();
+  })();</script></body></html>
+  '''
+    return y
 # --- 4. חיבור האפליקציות ---
 app = DispatcherMiddleware(main_app, {
     '/game1': game1,
@@ -390,6 +538,7 @@ app = DispatcherMiddleware(main_app, {
     '/php': php_app,
     '/html': html_app,
     '/app1': html_app,
+    '/d':rrr()
     '/app2': php_app
 })
 
