@@ -207,10 +207,10 @@ class League:
             
             # --- מערכת מענקים כלכליים למשחקים ---
             earned = 0
-            if my_team.id == t1.id and s1 > s2: earned = 25000       # ניצחון
-            elif my_team.id == t2.id and s2 > s1: earned = 25000     # ניצחון
-            elif s1 == s2: earned = 10000                            # תיקו
-            else: earned = 5000                                      # הפסד (זכויות שידור)
+            if my_team.id == t1.id and s1 > s2: earned = random.randint(20000,30000)       # ניצחון
+            elif my_team.id == t2.id and s2 > s1: earned = random.randint(20000,30000)     # ניצחון
+            elif s1 == s2: earned = random.randint(9000,11000)                            # תיקו
+            else: earned = random.randint(4000,6000)                                      # הפסד (זכויות שידור)
             
             my_team.budget += earned
             events.append(f"💰 הכנסות מהמשחק: ₪{earned:,}")
