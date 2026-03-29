@@ -538,7 +538,7 @@ app = DispatcherMiddleware(main_app, {
     '/php': php_app,
     '/html': html_app,
     '/app1': html_app,
-    '/d':rrr()
+    '/d':rrr(),
     '/app2': php_app
 })
 
